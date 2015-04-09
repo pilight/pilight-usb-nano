@@ -65,7 +65,7 @@ void initUART(void) {
 	
 	UCSR0B |= _BV(RXEN0);
 	UCSR0B |= _BV(RXCIE0);
-	// UCSR0B = UCSR0B | (1 << TXEN0);
+	UCSR0B |= _BV(TXEN0);
 
 	UCSR0C |= _BV(USBS0);
 	UCSR0C |= _BV(UCSZ01) | _BV(UCSZ00);
