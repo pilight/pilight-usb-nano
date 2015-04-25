@@ -207,8 +207,6 @@ void sendData() {
 		for(i=0;i<repeats;i++) {
 			for(z = scode; z < scode + codelen; z++) {
 				PORTD ^= _BV(PORTD5); 
-				delayMicroseconds(plstypes[0]); 
-				PORTD ^= _BV(PORTD5); 
 				delayMicroseconds(plstypes[data[z] - '0']);      
 			}
 		}
