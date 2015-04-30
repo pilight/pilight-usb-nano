@@ -209,14 +209,14 @@ void receive() {
 					maxrawlen = atol(&data[s]);
 				}
 				if(x == 2) {
-					mingaplen = atoi(&data[s]);
+					mingaplen = atoi(&data[s])/10;
 				}
 				x++;
 				s = i+1;
 			}
 		}
 		if(x == 3) {
-			maxgaplen = atol(&data[s]);
+			maxgaplen = atol(&data[s])/10;
 		}
 		/*
 		 * Once we tuned our firmware send back our settings + fw version
