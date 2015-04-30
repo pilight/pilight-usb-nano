@@ -17,6 +17,7 @@
 */ 
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
 #include <math.h>
@@ -25,13 +26,18 @@
 #include <avr/interrupt.h>
 #include <avr/power.h>
 
-#define BUFFER_SIZE 				256
-#define MAX_PULSE_TYPES			10
-#define BAUD								57600
-#define MIN_PULSELENGTH 		8			//tested to work down to 30us pulsewidth (=2)
-#define MAX_PULSELENGTH 		1600
-#define MIN_FOOTER_LENGTH		510		// 5100 deviced by 10
-#define MIN_STREAM_LENGTH		25
+#define BUFFER_SIZE 					256
+#define MAX_PULSE_TYPES				10
+#define BAUD									57600
+/* Number devided by 10 */
+#define MIN_PULSELENGTH 			8			//tested to work down to 30us pulsewidth (=2)
+#define MAX_PULSELENGTH 			1600
+#define VERSION								1
+
+volatile uint32_t minrawlen = 1000;
+volatile uint32_t maxrawlen = 0;
+volatile uint32_t mingaplen = 10000;
+volatile uint32_t maxgaplen = 5100;
 
 #include <util/setbaud.h>
 
@@ -48,7 +54,7 @@ char data[BUFFER_SIZE];
 volatile unsigned long ten_us_counter1 = 0;
 volatile uint16_t ten_us_counter = 0, codes[BUFFER_SIZE], plstypes[MAX_PULSE_TYPES];
 volatile uint8_t state = 0, codelen = 0, repeats = 0, pos = 0;
-volatile uint8_t valid_buffer = 0x00, r = 0, q = 0, plslen = 0, nrpulses = 0;
+volatile uint8_t valid_buffer = 0x00, r = 0, q = 0, rawlen = 0, nrpulses = 0;
 
 void initUART(void) {
 	DDRD |= _BV(PD1);
@@ -69,48 +75,6 @@ void initUART(void) {
 
 	UCSR0C |= _BV(USBS0);
 	UCSR0C |= _BV(UCSZ01) | _BV(UCSZ00);
-}
-
-void setup() {
-	uint8_t oldSREG = SREG;
-
-	cli();
-
-	/* We initialize our array to zero
-	 * here to spare resources while
-	 * running.
-	 */
-	for(r=0;r<MAX_PULSE_TYPES;r++) {
-		plstypes[r] = 0;
-	}	
-
-	ADCSRA &= ~_BV(ADEN);
-	ACSR = _BV(ACD);
-	DIDR0 = 0x3F;
-	DIDR1 |= _BV(AIN1D) | _BV(AIN0D);
-
-	power_twi_disable();
-	power_spi_disable();
-	power_timer0_disable();
-	power_timer1_disable();
-	//power_timer2_disable();
-
-	DDRD |= _BV(DDD5);
-	DDRB |= _BV(DDB5);
-	SREG = oldSREG;
-
-	// TIMER = (F_CPU / PRESCALER)
-	// OCR = ((F_CPU / PRESCALER) * SECONDS) - 1
-	OCR2A = 0x13;
-	TIMSK2 |= _BV(OCIE2A);
-	TCCR2A = TCCR2A | (1 << WGM21);
-	TCCR2B = TCCR2B | (1 << CS21);
-
-	PCMSK2 |= _BV(PCINT18);
-	PCICR |= _BV(PCIE2);
-	
-	initUART();
-	sei();
 }
 
 /* From the Arduino library */
@@ -159,22 +123,62 @@ char *readString(void) {
 	return rxstr;
 }
 
-void flush(void) {
-	unsigned char dummy;
-	while(UCSR0A & (1 << RXC0)) {
-		dummy = UDR0;
-	}
+void setup() {
+	uint8_t oldSREG = SREG;
+
+	cli();
+
+	/* We initialize our array to zero
+	 * here to spare resources while
+	 * running.
+	 */
+	for(r=0;r<MAX_PULSE_TYPES;r++) {
+		plstypes[r] = 0;
+	}	
+
+	ADCSRA &= ~_BV(ADEN);
+	ACSR = _BV(ACD);
+	DIDR0 = 0x3F;
+	DIDR1 |= _BV(AIN1D) | _BV(AIN0D);
+
+	power_twi_disable();
+	power_spi_disable();
+	power_timer0_disable();
+	power_timer1_disable();
+	//power_timer2_disable();
+
+	DDRD |= _BV(DDD5);
+	DDRB |= _BV(DDB5);
+	SREG = oldSREG;
+
+	// TIMER = (F_CPU / PRESCALER)
+	// OCR = ((F_CPU / PRESCALER) * SECONDS) - 1
+	OCR2A = 0x13;
+	TIMSK2 |= _BV(OCIE2A);
+	TCCR2A = TCCR2A | (1 << WGM21);
+	TCCR2B = TCCR2B | (1 << CS21);
+
+	PCMSK2 |= _BV(PCINT18);
+	PCICR |= _BV(PCIE2);
+	
+	initUART();
+
+	sei();
 }
 
 /* Everything is parsed on-the-fly to preserve memory */
-void sendData() {
-	unsigned int scode = 0, spulse = 0, srepeat = 0;
-	unsigned int i = 0, s = 0, z = 0;
+void receive() {
+	unsigned int scode = 0, spulse = 0, srepeat = 0, sstart = 0;
+	unsigned int i = 0, s = 0, z = 0, x = 0;
 
 	nrpulses = 0;
 
 	z = strlen(data);
 	for(i = 0; i < z; i++) {
+		if(data[i] == 's') {
+			sstart = i + 2;
+			break;
+		}
 		if(data[i] == 'c') {
 			scode = i + 2;
 		}
@@ -188,7 +192,38 @@ void sendData() {
 			data[i] = '\0';
 		}
 	}
-	if(scode > 0 && spulse > 0 && srepeat > 0) {
+	/*
+	 * Tune the firmware with pilight-daemon values
+	 */
+	if(sstart > 0) {
+		z = strlen(&data[sstart]);
+		s = sstart;
+		x = 0;
+		for(i = sstart; i < sstart + z; i++) {
+			if(data[i] == ',') {
+				data[i] = '\0';
+				if(x == 0) {
+					minrawlen = atol(&data[s]);
+				}
+				if(x == 1) {
+					maxrawlen = atol(&data[s]);
+				}
+				if(x == 2) {
+					mingaplen = atoi(&data[s]);
+				}
+				x++;
+				s = i+1;
+			}
+		}
+		if(x == 3) {
+			maxgaplen = atol(&data[s]);
+		}
+		/*
+		 * Once we tuned our firmware send back our settings + fw version
+		 */
+		sprintf(data, "v:%lu,%lu,%lu,%lu,%d,%d,%d@", minrawlen, maxrawlen, mingaplen, maxgaplen, VERSION, MIN_PULSELENGTH, MAX_PULSELENGTH);
+		writeString(data);
+	} else if(scode > 0 && spulse > 0 && srepeat > 0) {
 		z = strlen(&data[spulse]);
 		s = spulse;
 		nrpulses = 0;
@@ -226,7 +261,7 @@ ISR(USART_RX_vect) {
 	data[q++] = c;
 	if(c == '@') {
 		data[q++] = '\0';
-		sendData();
+		receive();
 		q = 0;
 	}
 }
@@ -236,7 +271,7 @@ ISR(TIMER2_COMPA_vect) {
 	cli();
 	ten_us_counter++;
 	ten_us_counter1++;
-	if(ten_us_counter1 > 100000) {
+	if(ten_us_counter1 > 100000) {	
 		putByte('\n');
 		ten_us_counter1 = 0;
 	}
@@ -300,9 +335,9 @@ ISR(PCINT2_vect){
 				nrpulses = 0;
 			}
 			/* Let's match footers */
-			if(ten_us_counter > MIN_FOOTER_LENGTH) {
+			if(ten_us_counter > mingaplen) {
 				/* Only match minimal length pulse streams */
-				if(nrpulses >= MIN_STREAM_LENGTH) {
+				if(nrpulses >= minrawlen && nrpulses <= maxrawlen) {
 					/*
 					 * Sending pulses over serial requires
 					 * a lot of cpu ticks. We therefor have
@@ -310,10 +345,10 @@ ISR(PCINT2_vect){
 					 * Therefor, only streams we at least 
 					 * received twice communicated.
 					 */
-					if(plslen == nrpulses) {
+					if(rawlen == nrpulses) {
 						broadcast();
 					}
-					plslen = nrpulses;
+					rawlen = nrpulses;
 				}
 				nrpulses = 0;
 			}
