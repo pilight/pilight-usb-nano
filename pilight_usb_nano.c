@@ -221,7 +221,7 @@ void receive() {
 		/*
 		 * Once we tuned our firmware send back our settings + fw version
 		 */
-		sprintf(data, "v:%lu,%lu,%lu,%lu,%d,%d,%d@", minrawlen, maxrawlen, mingaplen, maxgaplen, VERSION, MIN_PULSELENGTH, MAX_PULSELENGTH);
+		sprintf(data, "v:%lu,%lu,%lu,%lu,%d,%d,%d@", minrawlen, maxrawlen, mingaplen*10, maxgaplen*10, VERSION, MIN_PULSELENGTH, MAX_PULSELENGTH);
 		writeString(data);
 	} else if(scode > 0 && spulse > 0 && srepeat > 0) {
 		z = strlen(&data[spulse]);
