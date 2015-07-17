@@ -39,12 +39,13 @@ volatile uint32_t maxrawlen = 0;
 volatile uint32_t mingaplen = 10000;
 volatile uint32_t maxgaplen = 5100;
 
+const uint16_t MIN_2X_BAUD = F_CPU / (4 * (2 * 0XFFF + 1)) + 1;
+
 #include <util/setbaud.h>
 
 // Code formatting meant for sending
 // on  c:102020202020202020220202020020202200202200202020202020220020202203;p:279,2511,1395,9486;r:5@
 // off c:102020202020202020220202020020202200202200202020202020202020202203;p:279,2511,1395,9486;r:5@
-
 
 // Code formatting outputted by receiver
 // on  c:102020202020202020220202020020202200202200202020202020220020202203;p:279,2511,1395,9486@
@@ -57,17 +58,18 @@ volatile uint8_t state = 0, codelen = 0, repeats = 0, pos = 0;
 volatile uint8_t valid_buffer = 0x00, r = 0, q = 0, rawlen = 0, nrpulses = 0;
 
 void initUART(void) {
-	DDRD |= _BV(PD1);
-	DDRD &= ~_BV(PD0);
+  uint16_t x = 0;
 
-	UBRR0H = UBRRH_VALUE;
-	UBRR0L = UBRRL_VALUE;
+  if((F_CPU != 16000000UL || BAUD != 57600) && BAUD > MIN_2X_BAUD) {
+    UCSR0A = 1 << U2X0;
+    x = (F_CPU / 4 / BAUD - 1) / 2;
+  } else {
+    UCSR0A = 0;
+    x = (F_CPU / 8 / BAUD - 1) / 2;
+  }
 
-#if USE_2X
-	UCSR0A |= _BV(U2X0);
-#else
-	UCSR0A &= ~_BV(U2X0);
-#endif	
+  UBRR0H = x >> 8;
+  UBRR0L = x;
 	
 	UCSR0B |= _BV(RXEN0);
 	UCSR0B |= _BV(RXCIE0);
