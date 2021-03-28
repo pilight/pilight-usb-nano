@@ -20,6 +20,14 @@
 #include <avr/interrupt.h>
 #include <avr/power.h>
 
+#if !defined(__AVR_ATmega168P__) and !defined(__AVR_ATmega328P__)
+#error "MCU must be AVR ATmega168p or ATmega328p"
+#endif 
+
+#if (F_CPU != 16000000)
+#error "MCU clock must be 16Mhz"
+#endif
+
 #define BUFFER_SIZE 					256
 #define MAX_PULSE_TYPES				10
 #define BAUD									57600
@@ -71,20 +79,6 @@ void initUART(void) {
 
 	UCSR0C |= _BV(USBS0);
 	UCSR0C |= _BV(UCSZ01) | _BV(UCSZ00);
-}
-
-/* From the Arduino library */
-void delayMicroseconds(unsigned int us) {
-	if(--us == 0)
-		return;
-
-	us <<= 2;
-	us -= 2;
-
-	__asm__ __volatile__ (
-		"1: sbiw %0,1" "\n\t" // 2 cycles
-		"brne 1b" : "=w" (us) : "0" (us) // 2 cycles
-	);
 }
 
 uint8_t getByte(void) {
@@ -149,10 +143,58 @@ void setup() {
 
 	// TIMER = (F_CPU / PRESCALER)
 	// OCR = ((F_CPU / PRESCALER) * SECONDS) - 1
-	OCR2A = 0x13;
-	TIMSK2 |= _BV(OCIE2A);
-	TCCR2A = TCCR2A | (1 << WGM21);
-	TCCR2B = TCCR2B | (1 << CS21);
+
+  /* *** TIMER2 CONFIG TCCR2A *** 
+  Original TCCR2A = TCCR2A | (1 << WGM21);
+  Expected TCCR2A = 0b0000 0010 --> Mode 2 (CTC)
+
+  TCCR2A – Timer/Counter Control Register A, Initial Value 0
+  Bits 1:0 – WGM21:0: Waveform Generation Mode
+
+  WARNING! Arduino set WGM20 in /cores/arduino/wiring.c
+  #if defined(TCCR2A) && defined(WGM20)
+	  sbi(TCCR2A, WGM20);
+  */
+
+  bitSet(TCCR2A, WGM21); bitClear(TCCR2A, WGM20);
+
+  /* *** TIMER2 CONFIG TCCR2B ***
+  Original TCCR2B = TCCR2B | (1 << CS21);
+  Expected TCCR2B = 0b0000 0010 --> clkT2S/8 (from prescaler)
+
+  TCCR2B – Timer/Counter Control Register B, Initial Value 0
+  Bit 2:0 – CS22:0: Clock Select
+
+  WARNING! Arduino set CS22 in /cores/arduino/wiring.c
+  #if defined(TCCR2B) && defined(CS22)
+	  sbi(TCCR2B, CS22);
+  */
+
+  bitClear(TCCR2B, CS22); bitSet(TCCR2B, CS21); bitClear(TCCR2B, CS20);
+
+  /* *** SET COMPARE FLAG ***
+  OCF2A: Output Compare Flag 2 A
+  The OCF2A bit is set (one) when a compare match occurs between the Timer/Counter2 and the data in OCR2A – output
+  compare register2. OCF2A is cleared by hardware when executing the corresponding interrupt handling vector.
+  Alternatively, OCF2A is cleared by writing a logic one to the flag. When the I-bit in SREG, OCIE2A (Timer/Counter2 compare
+  match interrupt enable), and OCF2A are set (one), the Timer/Counter2 compare match interrupt is executed.
+  */
+
+  OCR2A = 0x13;
+
+  /* *** ENABLE TIMER2 COMPARE INTERRUPT ***
+  TIMSK2 – Timer/Counter2 Interrupt Mask Register
+  OCIE2A: Timer/Counter2 Output Compare Match A Interrupt Enable
+
+  TIMSK2 – Timer/Counter2 Interrupt Mask Register, Initial Value 0
+  Bit 1 – OCIE2A: Timer/Counter2 Output Compare Match A Interrupt Enable
+
+  When the OCIE2A bit is written to one and the I-bit in the status register is set (one), the Timer/Counter2 compare match A
+  interrupt is enabled. The corresponding interrupt is executed if a compare match in Timer/Counter2 occurs, i.e., when the
+  OCF2A bit is set in the Timer/Counter 2 interrupt flag register – TIFR2
+  */
+  
+  bitSet(TIMSK2, OCIE2A); 
 
 	PCMSK2 |= _BV(PCINT18);
 	PCICR |= _BV(PCIE2);
@@ -355,7 +397,6 @@ ISR(PCINT2_vect){
 	sei();
 }
 
-int main(void) {
-	setup();
-	while(1);
+void loop(){
+  // put your main code here, to run repeatedly:
 }
