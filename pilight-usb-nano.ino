@@ -58,7 +58,7 @@ volatile uint32_t maxgaplen = 5100;
 
 char data[BUFFER_SIZE] = {0};                       // Fill to 0 // Buffer for serial uart inputs and outputs
 volatile unsigned long ten_us_counter1 = 0;
-volatile uint16_t ten_us_counter = 0, codes[BUFFER_SIZE], plstypes[MAX_PULSE_TYPES];
+volatile uint16_t ten_us_counter = 0, codes[BUFFER_SIZE], plstypes[MAX_PULSE_TYPES] = {0};
 volatile uint8_t state = 0, codelen = 0, repeats = 0, pos = 0;
 volatile uint8_t valid_buffer = 0x00, r = 0, q = 0, rawlen = 0, nrpulses = 0;
 
@@ -67,14 +67,6 @@ void ISR_RX(); // Generic ISR function declaration for RF RX pulse interrupt han
 void setup() {
 
 	cli();
-
-	/* We initialize our array to zero
-	 * here to spare resources while
-	 * running.
-	 */
-	for(r=0;r<MAX_PULSE_TYPES;r++) {
-		plstypes[r] = 0;
-	}	
 
   pinMode(TX_PIN, OUTPUT);
 
