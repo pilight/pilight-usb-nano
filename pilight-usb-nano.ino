@@ -65,7 +65,6 @@ volatile uint8_t valid_buffer = 0x00, r = 0, q = 0, rawlen = 0, nrpulses = 0;
 void ISR_RX(); // Generic ISR function declaration for RF RX pulse interrupt handler instead specific AVR ISR(vector, attributes)
 
 void setup() {
-	uint8_t oldSREG = SREG;
 
 	cli();
 
@@ -77,20 +76,7 @@ void setup() {
 		plstypes[r] = 0;
 	}	
 
-	ADCSRA &= ~_BV(ADEN);
-	ACSR = _BV(ACD);
-	DIDR0 = 0x3F;
-	DIDR1 |= _BV(AIN1D) | _BV(AIN0D);
-
-	power_twi_disable();
-	power_spi_disable();
-	power_timer0_disable();
-	power_timer1_disable();
-	//power_timer2_disable();
-
   pinMode(TX_PIN, OUTPUT);
-
-	SREG = oldSREG;
 
 	// TIMER = (F_CPU / PRESCALER)
 	// OCR = ((F_CPU / PRESCALER) * SECONDS) - 1
