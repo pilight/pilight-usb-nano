@@ -55,20 +55,6 @@ volatile uint16_t ten_us_counter = 0, codes[BUFFER_SIZE], plstypes[MAX_PULSE_TYP
 volatile uint8_t state = 0, codelen = 0, repeats = 0, pos = 0;
 volatile uint8_t valid_buffer = 0x00, r = 0, q = 0, rawlen = 0, nrpulses = 0;
 
-void putByte(unsigned char data) {
-	/* Wait for empty transmit buffer */
-	while(!(UCSR0A & (1 << UDRE0)));
-		UDR0 = (unsigned char) data;
-}
-
-/*! \brief Writes an ASCII string to the TX buffer */
-void writeString(char *line) {
-	while(*line != '\0') {
-		putByte(*line);
-		++line;
-	}
-}
-
 void setup() {
 	uint8_t oldSREG = SREG;
 
@@ -217,7 +203,7 @@ void receive() {
 		 * Once we tuned our firmware send back our settings + fw version
 		 */
 		sprintf(data, "v:%lu,%lu,%lu,%lu,%d,%d,%d@", minrawlen, maxrawlen, mingaplen*10, maxgaplen*10, VERSION, MIN_PULSELENGTH, MAX_PULSELENGTH);
-		writeString(data);
+		Serial.print(data);
 	} else if(scode > 0 && spulse > 0 && srepeat > 0) {
 		z = strlen(&data[spulse]);
 		s = spulse;
@@ -271,7 +257,7 @@ ISR(TIMER2_COMPA_vect) {
 	ten_us_counter++;
 	ten_us_counter1++;
 	if(ten_us_counter1 > 100000) {	
-		putByte('\n');
+		Serial.println();
 		ten_us_counter1 = 0;
 	}
 	sei();
@@ -280,8 +266,7 @@ ISR(TIMER2_COMPA_vect) {
 void broadcast() {
 	int i = 0, x = 0, match = 0, p = 0;
 
-	putByte('c');
-	putByte(':');
+	Serial.print("c:");
 	for(i=0;i<nrpulses;i++) {
 		match = 0;
 		for(x=0;x<MAX_PULSE_TYPES;x++) {
@@ -294,7 +279,7 @@ void broadcast() {
 				 */
 				if((i%2) == 1) {
 					/* Write numbers */
-					putByte(48+x);
+					Serial.print(char(48+x));
 				}
 				match = 1;
 				break;
@@ -304,22 +289,19 @@ void broadcast() {
 			plstypes[p++] = codes[i];
 			/* See above */
 			if((i%2) == 1) {
-				putByte(48+p-1);
+				Serial.print(char(48+p-1));
 			}
 		}
 	}
-	putByte(';');
-	putByte('p');
-	putByte(':');
+	Serial.print(";p:");
 	for(i=0;i<p;i++) {
-		itoa(plstypes[i]*10, data, 10);
-		writeString(data);
+    Serial.print(plstypes[i]*10,DEC);
 		if(i+1 < p) {
-			putByte(',');
+			Serial.print(',');
 		}
 		plstypes[i] = 0;
 	}
-	putByte('@');
+	Serial.print('@');
 	nrpulses = 0;
 }
 
