@@ -6,7 +6,10 @@
 	along with pilight. If not, see	<http://www.gnu.org/licenses/>
 
   Copyright (C) 2021 Jorge Rivera. GNU General Public License v3.0.
-   - New version 2, fully Arduino IDE compatible
+  New v2 firmware features:
+   - Fully Arduino IDE compiler environment compatible. Arduino PRO IDE and Arduino CLI also supported.
+   - Configurable RF receiver output (RX_PIN); must be interrupt captable, depends board (D2 as default).
+   - Configurable RF transmitter input (TX_PIN); can be any digital pin, depends board (D5 as default).
 
 */ 
 
@@ -28,7 +31,9 @@
 #error "MCU clock must be 16Mhz"
 #endif
 
-#define RX_PIN                2     // Pin for ASK/OOK pulse Input from RF module data out.
+/* Configurable RX & TX pins */
+#define RX_PIN                2     // Pin for ASK/OOK pulse input from RF receiver module data output.
+#define TX_PIN                5     // Pin for ASK/OOK pulse output to RF transmitter module data input.
 
 #define BUFFER_SIZE 					256
 #define MAX_PULSE_TYPES				10
@@ -83,8 +88,8 @@ void setup() {
 	power_timer1_disable();
 	//power_timer2_disable();
 
-	DDRD |= _BV(DDD5);
-	DDRB |= _BV(DDB5);
+  pinMode(TX_PIN, OUTPUT);
+
 	SREG = oldSREG;
 
 	// TIMER = (F_CPU / PRESCALER)
@@ -221,23 +226,27 @@ void receive() {
 		}
 		plstypes[nrpulses++] = atoi(&data[s]);
 
+    /* Begin RF TX */
 		codelen = strlen(&data[scode]);
 		repeats = atoi(&data[srepeat]);
-		cli();
+    // Disable all interrupts
+		noInterrupts(); 
 		for(i=0;i<repeats;i++) {
 			for(z = scode; z < scode + codelen; z++) {
-				PORTD ^= _BV(PORTD5); 
-				delayMicroseconds(plstypes[data[z] - '0']);      
+				digitalWrite(TX_PIN,!(z%2));
+				delayMicroseconds(plstypes[data[z] - '0'] - 14);  // subtract 14us to compensate digitalWrite() delay      
 			}
 		}
-		PORTD &= ~_BV(PORTD5);
+		digitalWrite(TX_PIN,LOW);
 
 		for(r=0;r<MAX_PULSE_TYPES;r++) {
 			plstypes[r] = 0;
 		}
 		q = 0;
 
-		sei();
+    // Re-Enable all interrupts
+	  interrupts();
+    /* End RF TX */
 	}
 }
 
