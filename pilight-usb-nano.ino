@@ -35,6 +35,8 @@
 #define RX_PIN                2     // Pin for ASK/OOK pulse input from RF receiver module data output.
 #define TX_PIN                5     // Pin for ASK/OOK pulse output to RF transmitter module data input.
 
+#define EVERY_SEC_LINE_FEED         // If defined, print line feed '\n' every second, to emulate legacy firmware.
+
 #define BUFFER_SIZE 					256
 #define MAX_PULSE_TYPES				10
 #define BAUD									57600
@@ -57,8 +59,10 @@ volatile uint32_t maxgaplen = 5100;
 // off c:102020202020202020220202020020202200202200202020202020202020202203;p:279,2511,1395,9486@
 
 char data[BUFFER_SIZE] = {0};                       // Fill to 0 // Buffer for serial uart inputs and outputs
-volatile unsigned long ten_us_counter1 = 0;
-volatile uint16_t ten_us_counter = 0, codes[BUFFER_SIZE], plstypes[MAX_PULSE_TYPES] = {0};
+volatile uint16_t codes[BUFFER_SIZE] = {0};         // Fill to 0 // Buffer to store pulses length
+volatile uint16_t plstypes[MAX_PULSE_TYPES] = {0};  // Fill to 0 // Buffer to store pulse types (RX and TX)
+volatile uint32_t new_counter = 0;                  // Global time counter to store initial pulse micros(). Replaces global ten_us_counter.
+
 volatile uint8_t state = 0, codelen = 0, repeats = 0, pos = 0;
 volatile uint8_t valid_buffer = 0x00, r = 0, q = 0, rawlen = 0, nrpulses = 0;
 
@@ -66,64 +70,7 @@ void ISR_RX(); // Generic ISR function declaration for RF RX pulse interrupt han
 
 void setup() {
 
-	cli();
-
   pinMode(TX_PIN, OUTPUT);
-
-	// TIMER = (F_CPU / PRESCALER)
-	// OCR = ((F_CPU / PRESCALER) * SECONDS) - 1
-
-  /* *** TIMER2 CONFIG TCCR2A *** 
-  Original TCCR2A = TCCR2A | (1 << WGM21);
-  Expected TCCR2A = 0b0000 0010 --> Mode 2 (CTC)
-
-  TCCR2A – Timer/Counter Control Register A, Initial Value 0
-  Bits 1:0 – WGM21:0: Waveform Generation Mode
-
-  WARNING! Arduino set WGM20 in /cores/arduino/wiring.c
-  #if defined(TCCR2A) && defined(WGM20)
-	  sbi(TCCR2A, WGM20);
-  */
-
-  bitSet(TCCR2A, WGM21); bitClear(TCCR2A, WGM20);
-
-  /* *** TIMER2 CONFIG TCCR2B ***
-  Original TCCR2B = TCCR2B | (1 << CS21);
-  Expected TCCR2B = 0b0000 0010 --> clkT2S/8 (from prescaler)
-
-  TCCR2B – Timer/Counter Control Register B, Initial Value 0
-  Bit 2:0 – CS22:0: Clock Select
-
-  WARNING! Arduino set CS22 in /cores/arduino/wiring.c
-  #if defined(TCCR2B) && defined(CS22)
-	  sbi(TCCR2B, CS22);
-  */
-
-  bitClear(TCCR2B, CS22); bitSet(TCCR2B, CS21); bitClear(TCCR2B, CS20);
-
-  /* *** SET COMPARE FLAG ***
-  OCF2A: Output Compare Flag 2 A
-  The OCF2A bit is set (one) when a compare match occurs between the Timer/Counter2 and the data in OCR2A – output
-  compare register2. OCF2A is cleared by hardware when executing the corresponding interrupt handling vector.
-  Alternatively, OCF2A is cleared by writing a logic one to the flag. When the I-bit in SREG, OCIE2A (Timer/Counter2 compare
-  match interrupt enable), and OCF2A are set (one), the Timer/Counter2 compare match interrupt is executed.
-  */
-
-  OCR2A = 0x13;
-
-  /* *** ENABLE TIMER2 COMPARE INTERRUPT ***
-  TIMSK2 – Timer/Counter2 Interrupt Mask Register
-  OCIE2A: Timer/Counter2 Output Compare Match A Interrupt Enable
-
-  TIMSK2 – Timer/Counter2 Interrupt Mask Register, Initial Value 0
-  Bit 1 – OCIE2A: Timer/Counter2 Output Compare Match A Interrupt Enable
-
-  When the OCIE2A bit is written to one and the I-bit in the status register is set (one), the Timer/Counter2 compare match A
-  interrupt is enabled. The corresponding interrupt is executed if a compare match in Timer/Counter2 occurs, i.e., when the
-  OCF2A bit is set in the Timer/Counter 2 interrupt flag register – TIFR2
-  */
-  
-  bitSet(TIMSK2, OCIE2A); 
 
   // Arduino built-in function to attach Interrupt Service Routines (depends board)
 	attachInterrupt(digitalPinToInterrupt(RX_PIN), ISR_RX, CHANGE);
@@ -131,7 +78,6 @@ void setup() {
   // Arduino build-in function to set serial UART data baud rate (depends board)
 	Serial.begin(BAUD);
 
-	sei();
 }
 
 /* Everything is parsed on-the-fly to preserve memory */
@@ -242,18 +188,6 @@ void serialEvent() {
 	}
 }
 
-/* Our main timer */
-ISR(TIMER2_COMPA_vect) {
-	cli();
-	ten_us_counter++;
-	ten_us_counter1++;
-	if(ten_us_counter1 > 100000) {	
-		Serial.println();
-		ten_us_counter1 = 0;
-	}
-	sei();
-}
-
 void broadcast() {
 	int i = 0, x = 0, match = 0, p = 0;
 
@@ -301,6 +235,11 @@ void ISR_RX(){
   // Disable ISR for RF RX interrupt handler only
   detachInterrupt(digitalPinToInterrupt(RX_PIN));
 
+  uint32_t current_counter = micros();
+  uint16_t ten_us_counter  = uint16_t((current_counter-new_counter)/10);
+
+  new_counter = current_counter;
+
 	/* We first do some filtering (same as pilight BPF) */
 	if(ten_us_counter > MIN_PULSELENGTH) {
 		if(ten_us_counter < MAX_PULSELENGTH) {
@@ -329,7 +268,6 @@ void ISR_RX(){
 			}
 		}
 	}
-	ten_us_counter = 0;
 
   // Re-enable ISR for RF RX interrupt handler
   attachInterrupt(digitalPinToInterrupt(RX_PIN), ISR_RX, CHANGE);
@@ -337,4 +275,12 @@ void ISR_RX(){
 
 void loop(){
   // put your main code here, to run repeatedly:
+
+#ifdef EVERY_SEC_LINE_FEED
+  static unsigned long line_feed_counter = 0;
+  if (millis() > line_feed_counter){
+    line_feed_counter = millis()+1000;
+    Serial.println();
+  }
+#endif
 }
