@@ -7,8 +7,10 @@
 
   Copyright (C) 2021 Jorge Rivera. GNU General Public License v3.0.
   New v2 firmware features:
+   - Can run on any AVR Arduino compatible board, like Arduino UNO, Nano, MEGA, Leonardo, etc.
+   - Can run on other platforms like Arduino DUE, M0 (any SAMD boards), ESP8266, ESP32, Teensy, even Raspberry Pico. 
    - Fully Arduino IDE compiler environment compatible. Arduino PRO IDE and Arduino CLI also supported.
-   - Configurable RF receiver output (RX_PIN); must be interrupt captable, depends board (D2 as default).
+   - Configurable RF receiver output (RX_PIN); must be interrupt attachable, depends board (D2 as default).
    - Configurable RF transmitter input (TX_PIN); can be any digital pin, depends board (D5 as default).
 
 */ 
@@ -22,14 +24,6 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <avr/power.h>
-
-#if !defined(__AVR_ATmega168P__) and !defined(__AVR_ATmega328P__)
-#error "MCU must be AVR ATmega168p or ATmega328p"
-#endif 
-
-#if (F_CPU != 16000000)
-#error "MCU clock must be 16Mhz"
-#endif
 
 /* Configurable RX & TX pins */
 #define RX_PIN                2     // Pin for ASK/OOK pulse input from RF receiver module data output.
