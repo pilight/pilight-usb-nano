@@ -41,10 +41,6 @@ volatile uint32_t maxrawlen = 0;
 volatile uint32_t mingaplen = 10000;
 volatile uint32_t maxgaplen = 5100;
 
-const uint16_t MIN_2X_BAUD = F_CPU / (4 * (2 * 0XFFF + 1)) + 1;
-
-#include <util/setbaud.h>
-
 // Code formatting meant for sending
 // on  c:102020202020202020220202020020202200202200202020202020220020202203;p:279,2511,1395,9486;r:5@
 // off c:102020202020202020220202020020202200202200202020202020202020202203;p:279,2511,1395,9486;r:5@
@@ -53,39 +49,11 @@ const uint16_t MIN_2X_BAUD = F_CPU / (4 * (2 * 0XFFF + 1)) + 1;
 // on  c:102020202020202020220202020020202200202200202020202020220020202203;p:279,2511,1395,9486@
 // off c:102020202020202020220202020020202200202200202020202020202020202203;p:279,2511,1395,9486@
 
-char data[BUFFER_SIZE];
+char data[BUFFER_SIZE] = {0};                       // Fill to 0 // Buffer for serial uart inputs and outputs
 volatile unsigned long ten_us_counter1 = 0;
 volatile uint16_t ten_us_counter = 0, codes[BUFFER_SIZE], plstypes[MAX_PULSE_TYPES];
 volatile uint8_t state = 0, codelen = 0, repeats = 0, pos = 0;
 volatile uint8_t valid_buffer = 0x00, r = 0, q = 0, rawlen = 0, nrpulses = 0;
-
-void initUART(void) {
-  uint16_t x = 0;
-
-  if((F_CPU != 16000000UL || BAUD != 57600) && BAUD > MIN_2X_BAUD) {
-    UCSR0A = 1 << U2X0;
-    x = (F_CPU / 4 / BAUD - 1) / 2;
-  } else {
-    UCSR0A = 0;
-    x = (F_CPU / 8 / BAUD - 1) / 2;
-  }
-
-  UBRR0H = x >> 8;
-  UBRR0L = x;
-	
-	UCSR0B |= _BV(RXEN0);
-	UCSR0B |= _BV(RXCIE0);
-	UCSR0B |= _BV(TXEN0);
-
-	UCSR0C |= _BV(USBS0);
-	UCSR0C |= _BV(UCSZ01) | _BV(UCSZ00);
-}
-
-uint8_t getByte(void) {
-	/* Wait for data to be buffer */
-	while(!(UCSR0A & (1 << RXC0)));
-		return (uint8_t)UDR0;
-}
 
 void putByte(unsigned char data) {
 	/* Wait for empty transmit buffer */
@@ -99,18 +67,6 @@ void writeString(char *line) {
 		putByte(*line);
 		++line;
 	}
-}
-
-char *readString(void) {
-	static char rxstr[32];
-	static char *temp;
-	temp = rxstr;
-
-	while((*temp = getByte()) != '\n') {
-		++temp;
-	}
-
-	return rxstr;
 }
 
 void setup() {
@@ -199,7 +155,8 @@ void setup() {
 	PCMSK2 |= _BV(PCINT18);
 	PCICR |= _BV(PCIE2);
 	
-	initUART();
+  // Arduino build-in function to set serial UART data baud rate (depends board)
+	Serial.begin(BAUD);
 
 	sei();
 }
@@ -294,13 +251,17 @@ void receive() {
 	}
 }
 
-ISR(USART_RX_vect) {
-	char c = UDR0;
-	data[q++] = c;
+// Arduino build-in function called by INT when serial data is available (depends board)
+void serialEvent() {
+  // get the new byte
+  char c = (char)Serial.read();
+  // add it to the inputString
+  data[q++] = c;
+  // if the incoming character is a @ call receive()
 	if(c == '@') {
-		data[q++] = '\0';
-		receive();
-		q = 0;
+	  data[q++] = '\0';
+	  receive();
+	  q = 0;
 	}
 }
 
