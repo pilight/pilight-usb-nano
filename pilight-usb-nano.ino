@@ -28,6 +28,8 @@
 #error "MCU clock must be 16Mhz"
 #endif
 
+#define RX_PIN                2     // Pin for ASK/OOK pulse Input from RF module data out.
+
 #define BUFFER_SIZE 					256
 #define MAX_PULSE_TYPES				10
 #define BAUD									57600
@@ -54,6 +56,8 @@ volatile unsigned long ten_us_counter1 = 0;
 volatile uint16_t ten_us_counter = 0, codes[BUFFER_SIZE], plstypes[MAX_PULSE_TYPES];
 volatile uint8_t state = 0, codelen = 0, repeats = 0, pos = 0;
 volatile uint8_t valid_buffer = 0x00, r = 0, q = 0, rawlen = 0, nrpulses = 0;
+
+void ISR_RX(); // Generic ISR function declaration for RF RX pulse interrupt handler instead specific AVR ISR(vector, attributes)
 
 void setup() {
 	uint8_t oldSREG = SREG;
@@ -138,8 +142,8 @@ void setup() {
   
   bitSet(TIMSK2, OCIE2A); 
 
-	PCMSK2 |= _BV(PCINT18);
-	PCICR |= _BV(PCIE2);
+  // Arduino built-in function to attach Interrupt Service Routines (depends board)
+	attachInterrupt(digitalPinToInterrupt(RX_PIN), ISR_RX, CHANGE);
 	
   // Arduino build-in function to set serial UART data baud rate (depends board)
 	Serial.begin(BAUD);
@@ -305,8 +309,11 @@ void broadcast() {
 	nrpulses = 0;
 }
 
-ISR(PCINT2_vect){
-	cli();
+// Generic ISR function for RF RX pulse interrupt handler
+void ISR_RX(){
+  // Disable ISR for RF RX interrupt handler only
+  detachInterrupt(digitalPinToInterrupt(RX_PIN));
+
 	/* We first do some filtering (same as pilight BPF) */
 	if(ten_us_counter > MIN_PULSELENGTH) {
 		if(ten_us_counter < MAX_PULSELENGTH) {
@@ -336,8 +343,9 @@ ISR(PCINT2_vect){
 		}
 	}
 	ten_us_counter = 0;
-	TCNT1 = 0;
-	sei();
+
+  // Re-enable ISR for RF RX interrupt handler
+  attachInterrupt(digitalPinToInterrupt(RX_PIN), ISR_RX, CHANGE);
 }
 
 void loop(){
