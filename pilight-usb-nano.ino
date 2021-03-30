@@ -30,10 +30,10 @@
 #define MAX_PULSELENGTH 			1600
 #define VERSION								2
 
-volatile uint32_t minrawlen = 1000;
-volatile uint32_t maxrawlen = 0;
-volatile uint32_t mingaplen = 10000;
-volatile uint32_t maxgaplen = 5100;
+uint32_t minrawlen = 1000;
+uint32_t maxrawlen = 0;
+uint32_t mingaplen = 10000;
+uint32_t maxgaplen = 5100;          // Unused. Preserved for legacy compatibility.
 
 // Code formatting meant for sending
 // on  c:102020202020202020220202020020202200202200202020202020220020202203;p:279,2511,1395,9486;r:5@
@@ -52,6 +52,7 @@ volatile uint8_t q = 0;                             // Index of data buffer
 volatile uint8_t rawlen = 0;                        // Flag to ensure to call broadcast() after reveive two same lenght pulse train
 volatile uint8_t nrpulses = 0;                      // Index of pulse lenght buffer
 volatile uint8_t broadcast_flag = 0;                // Flag to call broadcast with nrpulses value
+volatile uint8_t receive_flag = 0;                  // Flag to call receive() in loop()
 
 void ISR_RX(); // Generic ISR function declaration for RF RX pulse interrupt handler instead specific AVR ISR(vector, attributes)
 
@@ -162,16 +163,18 @@ void receive() {
 
 // Arduino build-in function called by INT when serial data is available (depends board)
 void serialEvent() {
-  // get the new byte
-  char c = (char)Serial.read();
-  // add it to the inputString
-  data[q++] = c;
-  // if the incoming character is a @ call receive()
-	if(c == '@') {
-	  data[q++] = '\0';
-	  receive();
-	  q = 0;
-	}
+  while (Serial.available() and !receive_flag ) {
+    // get the new byte
+    char c = (char)Serial.read();
+    // add it to the inputString
+    data[q++] = c;
+    // if the incoming character is a @ set receive_flag call receive() in loop() outside ISR
+    if(c == '@') {
+      data[q++] = '\0';
+      receive_flag = true;
+      q = 0;
+    }
+  }
 }
 
 void broadcast(uint8_t nrpulses) {
@@ -272,6 +275,14 @@ void ISR_RX(){
 }
 
 void loop(){
+
+  // if receive flag is set
+  if (receive_flag){
+    // Call to receive()
+    receive();
+    // Clear flag
+    receive_flag = 0;
+  }
 
   // if broadcast flag is set
   if (broadcast_flag > 0){
