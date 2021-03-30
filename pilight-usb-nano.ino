@@ -12,6 +12,7 @@
    - Fully Arduino IDE compiler environment compatible. Arduino PRO IDE and Arduino CLI also supported.
    - Configurable RF receiver output (RX_PIN); must be interrupt attachable, depends board (D2 as default).
    - Configurable RF transmitter input (TX_PIN); can be any digital pin, depends board (D5 as default).
+   - Support to configure a digital output so that a led blinks on valid RF code reception.
 
 */ 
 
@@ -21,6 +22,7 @@
 
 #define EVERY_SEC_LINE_FEED         // If defined, print line feed '\n' every second, to emulate legacy firmware.
 //#define SEND_STRIPPED_SPACES      // If defined, send every 'space' before 'pulse' in broadcast(), which stripped in legacy firmware.
+//#define LED_BLINK_RX LED_BUILTIN  // If defined, sets the digital output to blink on valid RF code reception.
 
 #define BUFFER_SIZE 					256
 #define MAX_PULSE_TYPES				10
@@ -59,6 +61,10 @@ void ISR_RX(); // Generic ISR function declaration for RF RX pulse interrupt han
 void setup() {
 
   pinMode(TX_PIN, OUTPUT);
+
+#ifdef LED_BLINK_RX
+  pinMode(LED_BLINK_RX, OUTPUT);
+#endif
 
   // Arduino built-in function to attach Interrupt Service Routines (depends board)
 	attachInterrupt(digitalPinToInterrupt(RX_PIN), ISR_RX, CHANGE);
@@ -286,10 +292,20 @@ void loop(){
 
   // if broadcast flag is set
   if (broadcast_flag > 0){
+
+#ifdef LED_BLINK_RX
+    digitalWrite(LED_BLINK_RX, HIGH); // Led blink on RF RX
+#endif
+
     // Call to broadcast()
     broadcast(broadcast_flag);
     // Clear flag
     broadcast_flag = 0;
+
+#ifdef LED_BLINK_RX
+    digitalWrite(LED_BLINK_RX, LOW); // Led blink on RF RX
+#endif
+
     // Re-enable ISR for RF RX interrupt handler
     attachInterrupt(digitalPinToInterrupt(RX_PIN), ISR_RX, CHANGE);
   }
