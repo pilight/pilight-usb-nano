@@ -20,6 +20,7 @@
 #define TX_PIN                5     // Pin for ASK/OOK pulse output to RF transmitter module data input.
 
 #define EVERY_SEC_LINE_FEED         // If defined, print line feed '\n' every second, to emulate legacy firmware.
+//#define SEND_STRIPPED_SPACES      // If defined, send every 'space' before 'pulse' in broadcast(), which stripped in legacy firmware.
 
 #define BUFFER_SIZE 					256
 #define MAX_PULSE_TYPES				10
@@ -181,6 +182,8 @@ void broadcast() {
 		for(x=0;x<MAX_PULSE_TYPES;x++) {
 			/* We device these numbers by 10 to normalize them a bit */
 			if(((plstypes[x]/10)-(codes[i]/10)) <= 2) {
+
+#ifndef SEND_STRIPPED_SPACES 
 				/* Every 'space' is followed by a 'pulse'.
 				 * All spaces are stripped to spare
 				 * resources. The spaces can easily be
@@ -190,16 +193,25 @@ void broadcast() {
 					/* Write numbers */
 					Serial.print(char(48+x));
 				}
+#else
+				/* Write numbers */
+				Serial.print(char(48+x));
+#endif
 				match = 1;
 				break;
 			}
 		}
 		if(match == 0) {
 			plstypes[p++] = codes[i];
+
+#ifndef SEND_STRIPPED_SPACES 
 			/* See above */
 			if((i%2) == 1) {
 				Serial.print(char(48+p-1));
 			}
+#else
+      Serial.print(char(48+p-1));
+#endif 
 		}
 	}
 	Serial.print(";p:");
