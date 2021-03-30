@@ -5,17 +5,23 @@ The pilight USB Nano software allows any computer with an USB port to work with 
 [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](http://www.gnu.org/licenses/gpl-3.0)
 
 ## New v2 firmware features:
- - Can run on any AVR Arduino compatible board, like Arduino UNO, Nano, MEGA, Leonardo, etc.
- - Can run on other platforms like Arduino DUE, M0 (any SAMD boards), ESP8266, ESP32, Teensy, even Raspberry Pico. 
+ - Can run on any AVR Arduino compatible board, like Arduino UNO, Nano, MEGA, Leonardo, etc. any clock speed allowed.
+ - Can run on other platforms like Arduino SAMD boards (DUE, M0, etc.), ESP8266, ESP32, Teensy, even Raspberry Pico. 
+ - Works using the MCU's internal USB-Serial COM port (CDC/ACM device class) or any onboard/external USB-Serial adapter.
  - Fully Arduino IDE compiler environment compatible. Arduino PRO IDE and Arduino CLI also supported.
  - Configurable RF receiver output (RX_PIN); must be interrupt attachable, depends board (D2 as default).
  - Configurable RF transmitter input (TX_PIN); can be any digital pin, depends board (D5 as default).
+ - Support to configure a digital output so that a led blinks at valid RF code reception.
+ - Support to configure send of every 'space' before 'pulse', which stripped in previous version firmware.
+ - Support to configure initial RX settings at boot, like as 's:22,200,3000,51000@'.
+ - Fix TX pulse generator drift from 9.95µS to 0.69µS (AVR@16Mhz).
+ - Improve RX pulse meter resolution from 10µS to 4µS (AVR@16Mhz).
 
 ## Usage:
 
 1. Compile the firmware:
   ```
-  - Open Ardino IDE application
+  - Open Arduino IDE application
   - File> Open> Select file "pilight-usb-nano.ino"
   - Tools> Board> Select your board
   - Sketch> Verify/Compile
@@ -49,6 +55,51 @@ Windows Example:
 		}
 	}
 ```
+
+## Example:
+Transmitter code:
+```
+c:011010100101011010100110101001100110010101100110101010101010101012;p:1400,600,6800;r:4@
+```
+  * Receive with spaces:
+    ```
+    c:011010100101011010100110101001100110010101100110101010101010101012;p:1400,600,6800@
+    ```
+
+  * Receive without spaces:
+    ```
+    c:100011100010001010111010000000002;p:1400,600,6800@
+    ```
+
+## Decoding:
+You can decode and encode any code using an external tool **"picoder"** from https://github.com/latchdevel/picoder
+
+Decode example:
+```
+$ picoder decode -s "c:011010100101011010100110101001100110010101100110101010101010101012;p:1400,600,6800@"
+```
+return:
+```
+  [{
+    "conrad_rsl_switch": {
+      "id": 1,
+      "unit": 2,
+      "state": "on"
+    }
+  }]
+```
+
+Encode example:
+```
+$ picoder encode -f '{ "conrad_rsl_switch" : {"id":1,"unit":2,"on":1} }' -r 5
+```
+return:
+```
+c:011010100101011010100110101001100110010101100110101010101010101012;p:1400,600,6800;r:5@
+```
+
+## To do:
+- [ ] Support to measure RSSI of receivers that provide it.
 
 # License
 
