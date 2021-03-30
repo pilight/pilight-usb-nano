@@ -45,12 +45,13 @@ volatile uint32_t maxgaplen = 5100;
 
 char data[BUFFER_SIZE] = {0};                       // Fill to 0 // Buffer for serial uart inputs and outputs
 volatile uint16_t codes[BUFFER_SIZE] = {0};         // Fill to 0 // Buffer to store pulses length
-volatile uint16_t plstypes[MAX_PULSE_TYPES] = {0};  // Fill to 0 // Buffer to store pulse types (RX and TX)
+         uint16_t plstypes[MAX_PULSE_TYPES] = {0};  // Fill to 0 // Buffer to store pulse types (RX and TX)
 volatile uint32_t new_counter = 0;                  // Global time counter to store initial pulse micros(). Replaces global ten_us_counter.
 
 volatile uint8_t q = 0;                             // Index of data buffer
 volatile uint8_t rawlen = 0;                        // Flag to ensure to call broadcast() after reveive two same lenght pulse train
 volatile uint8_t nrpulses = 0;                      // Index of pulse lenght buffer
+volatile uint8_t broadcast_flag = 0;                // Flag to call broadcast with nrpulses value
 
 void ISR_RX(); // Generic ISR function declaration for RF RX pulse interrupt handler instead specific AVR ISR(vector, attributes)
 
@@ -173,7 +174,7 @@ void serialEvent() {
 	}
 }
 
-void broadcast() {
+void broadcast(uint8_t nrpulses) {
 	int i = 0, x = 0, match = 0, p = 0;
 
 	Serial.print("c:");
@@ -223,7 +224,6 @@ void broadcast() {
 		plstypes[i] = 0;
 	}
 	Serial.print('@');
-	nrpulses = 0;
 }
 
 // Generic ISR function for RF RX pulse interrupt handler
@@ -256,7 +256,7 @@ void ISR_RX(){
 					 * received twice communicated.
 					 */
 					if(rawlen == nrpulses) {
-						broadcast();
+						broadcast_flag = nrpulses;
 					}
 					rawlen = nrpulses;
 				}
@@ -265,12 +265,23 @@ void ISR_RX(){
 		}
 	}
 
-  // Re-enable ISR for RF RX interrupt handler
-  attachInterrupt(digitalPinToInterrupt(RX_PIN), ISR_RX, CHANGE);
+  // If no broadcast, re-enable ISR for RF RX interrupt handler
+  if (broadcast_flag == 0){
+    attachInterrupt(digitalPinToInterrupt(RX_PIN), ISR_RX, CHANGE);
+  }
 }
 
 void loop(){
-  // put your main code here, to run repeatedly:
+
+  // if broadcast flag is set
+  if (broadcast_flag > 0){
+    // Call to broadcast()
+    broadcast(broadcast_flag);
+    // Clear flag
+    broadcast_flag = 0;
+    // Re-enable ISR for RF RX interrupt handler
+    attachInterrupt(digitalPinToInterrupt(RX_PIN), ISR_RX, CHANGE);
+  }
 
 #ifdef EVERY_SEC_LINE_FEED
   static unsigned long line_feed_counter = 0;
