@@ -47,7 +47,9 @@ volatile uint16_t codes[BUFFER_SIZE] = {0};         // Fill to 0 // Buffer to st
 volatile uint16_t plstypes[MAX_PULSE_TYPES] = {0};  // Fill to 0 // Buffer to store pulse types (RX and TX)
 volatile uint32_t new_counter = 0;                  // Global time counter to store initial pulse micros(). Replaces global ten_us_counter.
 
-volatile uint8_t valid_buffer = 0x00, r = 0, q = 0, rawlen = 0, nrpulses = 0;
+volatile uint8_t q = 0;                             // Index of data buffer
+volatile uint8_t rawlen = 0;                        // Flag to ensure to call broadcast() after reveive two same lenght pulse train
+volatile uint8_t nrpulses = 0;                      // Index of pulse lenght buffer
 
 void ISR_RX(); // Generic ISR function declaration for RF RX pulse interrupt handler instead specific AVR ISR(vector, attributes)
 
@@ -144,8 +146,9 @@ void receive() {
 		}
 		digitalWrite(TX_PIN,LOW);
 
-		for(r=0;r<MAX_PULSE_TYPES;r++) {
-			plstypes[r] = 0;
+    // Clear pulse types array
+		for(i=0;i<MAX_PULSE_TYPES;i++) {
+			plstypes[i] = 0;
 		}
 		q = 0;
 
