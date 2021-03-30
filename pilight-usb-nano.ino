@@ -12,7 +12,9 @@
    - Fully Arduino IDE compiler environment compatible. Arduino PRO IDE and Arduino CLI also supported.
    - Configurable RF receiver output (RX_PIN); must be interrupt attachable, depends board (D2 as default).
    - Configurable RF transmitter input (TX_PIN); can be any digital pin, depends board (D5 as default).
-   - Support to configure a digital output so that a led blinks on valid RF code reception.
+   - Support to configure a digital output so that a led blinks at valid RF code reception.
+   - Support to configure send of every 'space' before 'pulse', which stripped in previous version firmware.
+   - Support to configure initial RX settings at boot, like as 's:22,200,3000,51000@'.
 
 */ 
 
@@ -23,18 +25,26 @@
 #define EVERY_SEC_LINE_FEED         // If defined, print line feed '\n' every second, to emulate legacy firmware.
 //#define SEND_STRIPPED_SPACES      // If defined, send every 'space' before 'pulse' in broadcast(), which stripped in legacy firmware.
 //#define LED_BLINK_RX LED_BUILTIN  // If defined, sets the digital output to blink on valid RF code reception.
+//#define DEFAULT_RX_SETTINGS       // If defined, sets valid RX settings at boot, like sets 's:22,200,3000,51000@'
 
 #define BUFFER_SIZE 					256
 #define MAX_PULSE_TYPES				10
 #define BAUD									57600
 /* Number devided by 10 */
 #define MIN_PULSELENGTH 			8			//tested to work down to 30us pulsewidth (=2)
-#define MAX_PULSELENGTH 			1600
+#define MAX_PULSELENGTH 			3600  // v2 change from 1600
 #define VERSION								2
 
+#ifdef DEFAULT_RX_SETTINGS
+uint32_t minrawlen = 22;
+uint32_t maxrawlen = 200;
+uint32_t mingaplen = 300;
+#else
 uint32_t minrawlen = 1000;
 uint32_t maxrawlen = 0;
 uint32_t mingaplen = 10000;
+#endif 
+
 uint32_t maxgaplen = 5100;          // Unused. Preserved for legacy compatibility.
 
 // Code formatting meant for sending
