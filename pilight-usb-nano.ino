@@ -15,16 +15,6 @@
 
 */ 
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdbool.h>
-#include <string.h>
-#include <math.h>
-#include <avr/pgmspace.h>
-#include <avr/io.h>
-#include <avr/interrupt.h>
-#include <avr/power.h>
-
 /* Configurable RX & TX pins */
 #define RX_PIN                2     // Pin for ASK/OOK pulse input from RF receiver module data output.
 #define TX_PIN                5     // Pin for ASK/OOK pulse output to RF transmitter module data input.
