@@ -3,6 +3,7 @@
 The pilight USB Nano software allows any computer with an USB port to work with pilight.
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](http://www.gnu.org/licenses/gpl-3.0)
+[![Compile tests](https://github.com/latchdevel/pilight-usb-nano/actions/workflows/CompileTests.yml/badge.svg?branch=arduino)](https://github.com/latchdevel/pilight-usb-nano/actions/workflows/CompileTests.yml)
 
 ## New v2 firmware features:
  - Can run on any AVR Arduino compatible board, like Arduino UNO, Nano, MEGA, Leonardo, etc. any clock speed allowed.
@@ -40,7 +41,7 @@ The pilight USB Nano software allows any computer with an USB port to work with 
 ## pilight USB Arduino hardware configuration:
 
 Linux example:
-```
+```json
 	"hardware": {
 		"433nano": {
 			"comport": "/dev/ttyUSB0"
@@ -48,7 +49,7 @@ Linux example:
 	}
 ```
 Windows Example:
-```
+```json
 	"hardware": {
 		"433nano": {
 			"comport": "COM5"
@@ -79,7 +80,7 @@ Decode example:
 $ picoder decode -s "c:011010100101011010100110101001100110010101100110101010101010101012;p:1400,600,6800@"
 ```
 return:
-```
+```json
   [{
     "conrad_rsl_switch": {
       "id": 1,
@@ -90,7 +91,7 @@ return:
 ```
 
 Encode example:
-```
+```json
 $ picoder encode -f '{ "conrad_rsl_switch" : {"id":1,"unit":2,"on":1} }' -r 5
 ```
 return:
