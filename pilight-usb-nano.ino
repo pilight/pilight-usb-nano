@@ -1,14 +1,15 @@
 /*
-	Copyright (C) 2015 CurlyMo
+  Copyright (C) 2015 CurlyMo
   This file is part of pilight. GNU General Public License v3.0.
 
-	You should have received a copy of the GNU General Public License
-	along with pilight. If not, see	<http://www.gnu.org/licenses/>
+  You should have received a copy of the GNU General Public License
+  along with pilight. If not, see <http://www.gnu.org/licenses/>
 
   Copyright (C) 2021 Jorge Rivera. GNU General Public License v3.0.
+
   New v2 firmware features:
-   - Can run on any AVR Arduino compatible board, like Arduino UNO, Nano, MEGA, Leonardo, etc.
-   - Can run on other platforms like Arduino DUE, M0 (any SAMD boards), ESP8266, ESP32, Teensy, even Raspberry Pico. 
+   - Can run on any AVR Arduino compatible board, like Arduino UNO, Nano, Mega, Leonardo, etc.
+   - Can run on other platforms like Arduino SAMD boards (DUE, M0, etc.), ESP8266, ESP32, Teensy, even Raspberry Pico.
    - Fully Arduino IDE compiler environment compatible. Arduino PRO IDE and Arduino CLI also supported.
    - Configurable RF receiver output (RX_PIN); must be interrupt attachable, depends board (D2 as default).
    - Configurable RF transmitter input (TX_PIN); can be any digital pin, depends board (D5 as default).
@@ -27,13 +28,13 @@
 //#define LED_BLINK_RX LED_BUILTIN  // If defined, sets the digital output to blink on valid RF code reception.
 //#define DEFAULT_RX_SETTINGS       // If defined, sets valid RX settings at boot, like sets 's:22,200,3000,51000@'
 
-#define BUFFER_SIZE 					256
-#define MAX_PULSE_TYPES				10
-#define BAUD									57600
+#define BUFFER_SIZE           256   // Warning: 256 max because buffer indexes "nrpulses" and "q" are "uint8_t" type
+#define MAX_PULSE_TYPES        10
+#define BAUD                57600
 /* Number devided by 10 */
-#define MIN_PULSELENGTH 			8			//tested to work down to 30us pulsewidth (=2)
-#define MAX_PULSELENGTH 			3600  // v2 change from 1600
-#define VERSION								2
+#define MIN_PULSELENGTH         8   // tested to work down to 30us pulsewidth (=2)
+#define MAX_PULSELENGTH      3600   // v2 change from 1600
+#define VERSION                 2   // Version 2 (Arduino compatible)
 
 #ifdef DEFAULT_RX_SETTINGS
 uint32_t minrawlen = 22;
@@ -77,104 +78,104 @@ void setup() {
 #endif
 
   // Arduino built-in function to attach Interrupt Service Routines (depends board)
-	attachInterrupt(digitalPinToInterrupt(RX_PIN), ISR_RX, CHANGE);
-	
+    attachInterrupt(digitalPinToInterrupt(RX_PIN), ISR_RX, CHANGE);
+    
   // Arduino build-in function to set serial UART data baud rate (depends board)
-	Serial.begin(BAUD);
+    Serial.begin(BAUD);
 
 }
 
 /* Everything is parsed on-the-fly to preserve memory */
 void receive() {
-	unsigned int scode = 0, spulse = 0, srepeat = 0, sstart = 0;
-	unsigned int i = 0, s = 0, z = 0, x = 0;
+    unsigned int scode = 0, spulse = 0, srepeat = 0, sstart = 0;
+    unsigned int i = 0, s = 0, z = 0, x = 0;
 
-	nrpulses = 0;
+    nrpulses = 0;
 
-	z = strlen(data);
-	for(i = 0; i < z; i++) {
-		if(data[i] == 's') {
-			sstart = i + 2;
-			break;
-		}
-		if(data[i] == 'c') {
-			scode = i + 2;
-		}
-		if(data[i] == 'p') {
-			spulse = i + 2;
-		}
-		if(data[i] == 'r') {
-			srepeat = i + 2;
-		}
-		if(data[i] == ';') {
-			data[i] = '\0';
-		}
-	}
-	/*
-	 * Tune the firmware with pilight-daemon values
-	 */
-	if(sstart > 0) {
-		z = strlen(&data[sstart]);
-		s = sstart;
-		x = 0;
-		for(i = sstart; i < sstart + z; i++) {
-			if(data[i] == ',') {
-				data[i] = '\0';
-				if(x == 0) {
-					minrawlen = atol(&data[s]);
-				}
-				if(x == 1) {
-					maxrawlen = atol(&data[s]);
-				}
-				if(x == 2) {
-					mingaplen = atoi(&data[s])/10;
-				}
-				x++;
-				s = i+1;
-			}
-		}
-		if(x == 3) {
-			maxgaplen = atol(&data[s])/10;
-		}
-		/*
-		 * Once we tuned our firmware send back our settings + fw version
-		 */
-		sprintf(data, "v:%lu,%lu,%lu,%lu,%d,%d,%d@", minrawlen, maxrawlen, mingaplen*10, maxgaplen*10, VERSION, MIN_PULSELENGTH, MAX_PULSELENGTH);
-		Serial.print(data);
-	} else if(scode > 0 && spulse > 0 && srepeat > 0) {
-		z = strlen(&data[spulse]);
-		s = spulse;
-		nrpulses = 0;
-		for(i = spulse; i < spulse + z; i++) {
-			if(data[i] == ',') {
-				data[i] = '\0';
-				plstypes[nrpulses++] = atoi(&data[s]);
-				s = i+1;
-			}
-		}
-		plstypes[nrpulses++] = atoi(&data[s]);
+    z = strlen(data);
+    for(i = 0; i < z; i++) {
+        if(data[i] == 's') {
+            sstart = i + 2;
+            break;
+        }
+        if(data[i] == 'c') {
+            scode = i + 2;
+        }
+        if(data[i] == 'p') {
+            spulse = i + 2;
+        }
+        if(data[i] == 'r') {
+            srepeat = i + 2;
+        }
+        if(data[i] == ';') {
+            data[i] = '\0';
+        }
+    }
+    /*
+     * Tune the firmware with pilight-daemon values
+     */
+    if(sstart > 0) {
+        z = strlen(&data[sstart]);
+        s = sstart;
+        x = 0;
+        for(i = sstart; i < sstart + z; i++) {
+            if(data[i] == ',') {
+                data[i] = '\0';
+                if(x == 0) {
+                    minrawlen = atol(&data[s]);
+                }
+                if(x == 1) {
+                    maxrawlen = atol(&data[s]);
+                }
+                if(x == 2) {
+                    mingaplen = atoi(&data[s])/10;
+                }
+                x++;
+                s = i+1;
+            }
+        }
+        if(x == 3) {
+            maxgaplen = atol(&data[s])/10;
+        }
+        /*
+         * Once we tuned our firmware send back our settings + fw version
+         */
+        sprintf(data, "v:%lu,%lu,%lu,%lu,%d,%d,%d@", minrawlen, maxrawlen, mingaplen*10, maxgaplen*10, VERSION, MIN_PULSELENGTH, MAX_PULSELENGTH);
+        Serial.print(data);
+    } else if(scode > 0 && spulse > 0 && srepeat > 0) {
+        z = strlen(&data[spulse]);
+        s = spulse;
+        nrpulses = 0;
+        for(i = spulse; i < spulse + z; i++) {
+            if(data[i] == ',') {
+                data[i] = '\0';
+                plstypes[nrpulses++] = atoi(&data[s]);
+                s = i+1;
+            }
+        }
+        plstypes[nrpulses++] = atoi(&data[s]);
 
     /* Begin RF TX */
     // Disable all interrupts
-		noInterrupts(); 
-		for(i=0;i<atoi(&data[srepeat]);i++) {
-			for(z = scode; z < scode + strlen(&data[scode]); z++) {
-				digitalWrite(TX_PIN,!(z%2));
-				delayMicroseconds(plstypes[data[z] - '0'] - 14);  // subtract 14us to compensate digitalWrite() delay      
-			}
-		}
-		digitalWrite(TX_PIN,LOW);
+        noInterrupts(); 
+        for(i=0;i<(unsigned int)atoi(&data[srepeat]);i++) {
+            for(z = scode; z < scode + strlen(&data[scode]); z++) {
+                digitalWrite(TX_PIN,!(z%2));
+                delayMicroseconds(plstypes[data[z] - '0'] - 14);  // subtract 14us to compensate digitalWrite() delay      
+            }
+        }
+        digitalWrite(TX_PIN,LOW);
 
     // Clear pulse types array
-		for(i=0;i<MAX_PULSE_TYPES;i++) {
-			plstypes[i] = 0;
-		}
-		q = 0;
+        for(i=0;i<MAX_PULSE_TYPES;i++) {
+            plstypes[i] = 0;
+        }
+        q = 0;
 
     // Re-Enable all interrupts
-	  interrupts();
+      interrupts();
     /* End RF TX */
-	}
+    }
 }
 
 // Arduino build-in function called by INT when serial data is available (depends board)
@@ -194,55 +195,55 @@ void serialEvent() {
 }
 
 void broadcast(uint8_t nrpulses) {
-	int i = 0, x = 0, match = 0, p = 0;
+    int i = 0, x = 0, match = 0, p = 0;
 
-	Serial.print("c:");
-	for(i=0;i<nrpulses;i++) {
-		match = 0;
-		for(x=0;x<MAX_PULSE_TYPES;x++) {
-			/* We device these numbers by 10 to normalize them a bit */
-			if(((plstypes[x]/10)-(codes[i]/10)) <= 2) {
+    Serial.print("c:");
+    for(i=0;i<nrpulses;i++) {
+        match = 0;
+        for(x=0;x<MAX_PULSE_TYPES;x++) {
+            /* We device these numbers by 10 to normalize them a bit */
+            if(((plstypes[x]/10)-(codes[i]/10)) <= 2) {
 
 #ifndef SEND_STRIPPED_SPACES 
-				/* Every 'space' is followed by a 'pulse'.
-				 * All spaces are stripped to spare
-				 * resources. The spaces can easily be
-				 * added afterwards.
-				 */
-				if((i%2) == 1) {
-					/* Write numbers */
-					Serial.print(char(48+x));
-				}
+                /* Every 'space' is followed by a 'pulse'.
+                 * All spaces are stripped to spare
+                 * resources. The spaces can easily be
+                 * added afterwards.
+                 */
+                if((i%2) == 1) {
+                    /* Write numbers */
+                    Serial.print(char(48+x));
+                }
 #else
-				/* Write numbers */
-				Serial.print(char(48+x));
+                /* Write numbers */
+                Serial.print(char(48+x));
 #endif
-				match = 1;
-				break;
-			}
-		}
-		if(match == 0) {
-			plstypes[p++] = codes[i];
+                match = 1;
+                break;
+            }
+        }
+        if(match == 0) {
+            plstypes[p++] = codes[i];
 
 #ifndef SEND_STRIPPED_SPACES 
-			/* See above */
-			if((i%2) == 1) {
-				Serial.print(char(48+p-1));
-			}
+            /* See above */
+            if((i%2) == 1) {
+                Serial.print(char(48+p-1));
+            }
 #else
       Serial.print(char(48+p-1));
 #endif 
-		}
-	}
-	Serial.print(";p:");
-	for(i=0;i<p;i++) {
+        }
+    }
+    Serial.print(";p:");
+    for(i=0;i<p;i++) {
     Serial.print(plstypes[i]*10,DEC);
-		if(i+1 < p) {
-			Serial.print(',');
-		}
-		plstypes[i] = 0;
-	}
-	Serial.print('@');
+        if(i+1 < p) {
+            Serial.print(',');
+        }
+        plstypes[i] = 0;
+    }
+    Serial.print('@');
 }
 
 // Generic ISR function for RF RX pulse interrupt handler
@@ -255,34 +256,34 @@ void ISR_RX(){
 
   new_counter = current_counter;
 
-	/* We first do some filtering (same as pilight BPF) */
-	if(ten_us_counter > MIN_PULSELENGTH) {
-		if(ten_us_counter < MAX_PULSELENGTH) {
-			/* All codes are buffered */
-			codes[nrpulses++] = ten_us_counter;
-			if(nrpulses > BUFFER_SIZE) {
-				nrpulses = 0;
-			}
-			/* Let's match footers */
-			if(ten_us_counter > mingaplen) {
-				/* Only match minimal length pulse streams */
-				if(nrpulses >= minrawlen && nrpulses <= maxrawlen) {
-					/*
-					 * Sending pulses over serial requires
-					 * a lot of cpu ticks. We therefor have
-					 * to be sure that we send valid codes.
-					 * Therefor, only streams we at least 
-					 * received twice communicated.
-					 */
-					if(rawlen == nrpulses) {
-						broadcast_flag = nrpulses;
-					}
-					rawlen = nrpulses;
-				}
-				nrpulses = 0;
-			}
-		}
-	}
+    /* We first do some filtering (same as pilight BPF) */
+    if(ten_us_counter > MIN_PULSELENGTH) {
+        if(ten_us_counter < MAX_PULSELENGTH) {
+            /* All codes are buffered */
+            codes[nrpulses++] = ten_us_counter;
+            if(nrpulses >= BUFFER_SIZE-1) {
+                nrpulses = 0;
+            }
+            /* Let's match footers */
+            if(ten_us_counter > mingaplen) {
+                /* Only match minimal length pulse streams */
+                if(nrpulses >= minrawlen && nrpulses <= maxrawlen) {
+                    /*
+                     * Sending pulses over serial requires
+                     * a lot of cpu ticks. We therefor have
+                     * to be sure that we send valid codes.
+                     * Therefor, only streams we at least 
+                     * received twice communicated.
+                     */
+                    if(rawlen == nrpulses) {
+                        broadcast_flag = nrpulses;
+                    }
+                    rawlen = nrpulses;
+                }
+                nrpulses = 0;
+            }
+        }
+    }
 
   // If no broadcast, re-enable ISR for RF RX interrupt handler
   if (broadcast_flag == 0){
