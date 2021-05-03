@@ -16,6 +16,7 @@
    - Support to configure a digital output so that a led blinks at valid RF code reception.
    - Support to configure send of every 'space' before 'pulse', which stripped in previous version firmware.
    - Support to configure initial RX settings at boot, like as 's:22,200,3000,51000@'.
+   - Support to configure show settings at boot, like as: 'v:22,200,3000,51000,2,8,3600@'
 
 */ 
 
@@ -27,6 +28,7 @@
 //#define SEND_STRIPPED_SPACES      // If defined, send every 'space' before 'pulse' in broadcast(), which stripped in legacy firmware.
 //#define LED_BLINK_RX LED_BUILTIN  // If defined, sets the digital output to blink on valid RF code reception.
 //#define DEFAULT_RX_SETTINGS       // If defined, sets valid RX settings at boot, like sets 's:22,200,3000,51000@'
+#define BOOT_SHOW_SETTINGS          // If defined, show settings at boot, like as: 'v:22,200,3000,51000,2,8,3600@'
 
 #define BUFFER_SIZE           256   // Warning: 256 max because buffer indexes "nrpulses" and "q" are "uint8_t" type
 #define MAX_PULSE_TYPES        10
@@ -78,10 +80,16 @@ void setup() {
 #endif
 
   // Arduino built-in function to attach Interrupt Service Routines (depends board)
-    attachInterrupt(digitalPinToInterrupt(RX_PIN), ISR_RX, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(RX_PIN), ISR_RX, CHANGE);
     
   // Arduino build-in function to set serial UART data baud rate (depends board)
-    Serial.begin(BAUD);
+  Serial.begin(BAUD);
+
+#ifdef BOOT_SHOW_SETTINGS
+  // Show settings at boot, like as: 'v:22,200,3000,51000,2,8,3600@'
+  sprintf(data, "v:%lu,%lu,%lu,%lu,%d,%d,%d@", minrawlen, maxrawlen, mingaplen*10, maxgaplen*10, VERSION, MIN_PULSELENGTH, MAX_PULSELENGTH);
+  Serial.print(data);
+#endif
 
 }
 
