@@ -16,7 +16,8 @@
    - Support to configure a digital output so that a led blinks at valid RF code reception.
    - Support to configure send of every 'space' before 'pulse', which stripped in previous version firmware.
    - Support to configure initial RX settings at boot, like as 's:22,200,3000,51000@'.
-   - Support to configure show settings at boot, like as: 'v:22,200,3000,51000,2,8,3600@'
+   - Support to configure show settings at boot, like as: 'v:22,200,3000,51000,2,8,3600@'.
+   - Support to configure add line feed '\n' each line output.
 
 */ 
 
@@ -24,11 +25,12 @@
 #define RX_PIN                2     // Pin for ASK/OOK pulse input from RF receiver module data output.
 #define TX_PIN                5     // Pin for ASK/OOK pulse output to RF transmitter module data input.
 
-#define EVERY_SEC_LINE_FEED         // If defined, print line feed '\n' every second, to emulate legacy firmware.
-//#define SEND_STRIPPED_SPACES      // If defined, send every 'space' before 'pulse' in broadcast(), which stripped in legacy firmware.
-//#define LED_BLINK_RX LED_BUILTIN  // If defined, sets the digital output to blink on valid RF code reception.
-//#define DEFAULT_RX_SETTINGS       // If defined, sets valid RX settings at boot, like sets 's:22,200,3000,51000@'
+//#define EVERY_SEC_LINE_FEED       // If defined, print line feed '\n' every second, to emulate legacy firmware.
+#define SEND_STRIPPED_SPACES        // If defined, send every 'space' before 'pulse' in broadcast(), which stripped in legacy firmware.
+#define LED_BLINK_RX LED_BUILTIN    // If defined, sets the digital output to blink on valid RF code reception.
+#define DEFAULT_RX_SETTINGS         // If defined, sets valid RX settings at boot, like sets 's:22,200,3000,51000@'
 #define BOOT_SHOW_SETTINGS          // If defined, show settings at boot, like as: 'v:22,200,3000,51000,2,8,3600@'
+#define ADD_LINE_FEED               // If defined, add line feed '\n' each line output.
 
 #define BUFFER_SIZE           256   // Warning: 256 max because buffer indexes "nrpulses" and "q" are "uint8_t" type
 #define MAX_PULSE_TYPES        10
@@ -88,7 +90,11 @@ void setup() {
 #ifdef BOOT_SHOW_SETTINGS
   // Show settings at boot, like as: 'v:22,200,3000,51000,2,8,3600@'
   sprintf(data, "v:%lu,%lu,%lu,%lu,%d,%d,%d@", minrawlen, maxrawlen, mingaplen*10, maxgaplen*10, VERSION, MIN_PULSELENGTH, MAX_PULSELENGTH);
+#ifdef ADD_LINE_FEED
+  Serial.println(data);
+#else
   Serial.print(data);
+#endif
 #endif
 
 }
@@ -149,7 +155,11 @@ void receive() {
          * Once we tuned our firmware send back our settings + fw version
          */
         sprintf(data, "v:%lu,%lu,%lu,%lu,%d,%d,%d@", minrawlen, maxrawlen, mingaplen*10, maxgaplen*10, VERSION, MIN_PULSELENGTH, MAX_PULSELENGTH);
+#ifdef ADD_LINE_FEED
+        Serial.println(data);
+#else
         Serial.print(data);
+#endif
     } else if(scode > 0 && spulse > 0 && srepeat > 0) {
         z = strlen(&data[spulse]);
         s = spulse;
@@ -251,7 +261,11 @@ void broadcast(uint8_t nrpulses) {
         }
         plstypes[i] = 0;
     }
+#ifdef ADD_LINE_FEED
+    Serial.println('@');
+#else
     Serial.print('@');
+#endif
 }
 
 // Generic ISR function for RF RX pulse interrupt handler
