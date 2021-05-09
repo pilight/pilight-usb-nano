@@ -28,26 +28,28 @@
 //#define EVERY_SEC_LINE_FEED       // If defined, print line feed '\n' every second, to emulate legacy firmware.
 #define SEND_STRIPPED_SPACES        // If defined, send every 'space' before 'pulse' in broadcast(), which stripped in legacy firmware.
 #define LED_BLINK_RX LED_BUILTIN    // If defined, sets the digital output to blink on valid RF code reception.
-#define DEFAULT_RX_SETTINGS         // If defined, sets valid RX settings at boot, like sets 's:22,200,3000,51000@'
-#define BOOT_SHOW_SETTINGS          // If defined, show settings at boot, like as: 'v:22,200,3000,51000,2,8,3600@'
+#define DEFAULT_RX_SETTINGS         // If defined, sets valid RX settings at boot, like sets 's:20,200,3000,51000@'
+#define BOOT_SHOW_SETTINGS          // If defined, show settings at boot, like as: 'v:20,200,3000,51000,2,1,1600@'
 #define ADD_LINE_FEED               // If defined, add line feed '\n' each line output.
 
 #define BUFFER_SIZE           256   // Warning: 256 max because buffer indexes "nrpulses" and "q" are "uint8_t" type
-#define MAX_PULSE_TYPES        10
+#define MAX_PULSE_TYPES        10   // From 0 to 9
 #define BAUD                57600
-/* Number devided by 10 */
-#define MIN_PULSELENGTH         8   // tested to work down to 30us pulsewidth (=2)
-#define MAX_PULSELENGTH      3600   // v2 change from 1600
+
+/* Show numbers devided by 10 */
+#define MIN_PULSELENGTH        10   // v2 change from 8 to 10 and show devided by 10
+#define MAX_PULSELENGTH     16000   // v2 change from 1600 to 16000 and show devided by 10
+
 #define VERSION                 2   // Version 2 (Arduino compatible)
 
 #ifdef DEFAULT_RX_SETTINGS
-uint32_t minrawlen = 22;
-uint32_t maxrawlen = 200;
-uint32_t mingaplen = 300;
+uint32_t minrawlen =    20;
+uint32_t maxrawlen =   200;
+uint32_t mingaplen =   300;         // Used and showing multiplied by 10
 #else
-uint32_t minrawlen = 1000;
-uint32_t maxrawlen = 0;
-uint32_t mingaplen = 10000;
+uint32_t minrawlen =  1000;
+uint32_t maxrawlen =     0;
+uint32_t mingaplen = 10000;         // Used and showing multiplied by 10
 #endif 
 
 uint32_t maxgaplen = 5100;          // Unused. Preserved for legacy compatibility.
@@ -89,7 +91,7 @@ void setup() {
 
 #ifdef BOOT_SHOW_SETTINGS
   // Show settings at boot, like as: 'v:22,200,3000,51000,2,8,3600@'
-  sprintf(data, "v:%lu,%lu,%lu,%lu,%d,%d,%d@", minrawlen, maxrawlen, mingaplen*10, maxgaplen*10, VERSION, MIN_PULSELENGTH, MAX_PULSELENGTH);
+  sprintf(data, "v:%lu,%lu,%lu,%lu,%d,%d,%d@", minrawlen, maxrawlen, mingaplen*10, maxgaplen*10, VERSION, MIN_PULSELENGTH/10, MAX_PULSELENGTH/10);
 #ifdef ADD_LINE_FEED
   Serial.println(data);
 #else
@@ -154,7 +156,7 @@ void receive() {
         /*
          * Once we tuned our firmware send back our settings + fw version
          */
-        sprintf(data, "v:%lu,%lu,%lu,%lu,%d,%d,%d@", minrawlen, maxrawlen, mingaplen*10, maxgaplen*10, VERSION, MIN_PULSELENGTH, MAX_PULSELENGTH);
+        sprintf(data, "v:%lu,%lu,%lu,%lu,%d,%d,%d@", minrawlen, maxrawlen, mingaplen*10, maxgaplen*10, VERSION, MIN_PULSELENGTH/10, MAX_PULSELENGTH/10);
 #ifdef ADD_LINE_FEED
         Serial.println(data);
 #else
@@ -255,7 +257,7 @@ void broadcast(uint8_t nrpulses) {
     }
     Serial.print(";p:");
     for(i=0;i<p;i++) {
-    Serial.print(plstypes[i]*10,DEC);
+        Serial.print(plstypes[i]*10,DEC);
         if(i+1 < p) {
             Serial.print(',');
         }
