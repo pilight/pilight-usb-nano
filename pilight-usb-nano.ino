@@ -15,8 +15,8 @@
    - Configurable RF transmitter input (TX_PIN); can be any digital pin, depends board (D5 as default).
    - Support to configure a digital output so that a led blinks at valid RF code reception.
    - Support to configure send of every 'space' before 'pulse', which stripped in previous version firmware.
-   - Support to configure initial RX settings at boot, like as 's:22,200,3000,51000@'.
-   - Support to configure show settings at boot, like as: 'v:22,200,3000,51000,2,8,3600@'.
+   - Support to configure initial RX settings at boot, like as 's:20,200,3000,51000@'.
+   - Support to configure show settings at boot, like as: 'v:20,200,3000,51000,2,1,1600@'.
    - Support to configure add line feed '\n' each line output.
 
 */ 
@@ -25,12 +25,12 @@
 #define RX_PIN                2     // Pin for ASK/OOK pulse input from RF receiver module data output.
 #define TX_PIN                5     // Pin for ASK/OOK pulse output to RF transmitter module data input.
 
-//#define EVERY_SEC_LINE_FEED       // If defined, print line feed '\n' every second, to emulate legacy firmware.
-#define SEND_STRIPPED_SPACES        // If defined, send every 'space' before 'pulse' in broadcast(), which stripped in legacy firmware.
-#define LED_BLINK_RX LED_BUILTIN    // If defined, sets the digital output to blink on valid RF code reception.
-#define DEFAULT_RX_SETTINGS         // If defined, sets valid RX settings at boot, like sets 's:20,200,3000,51000@'
-#define BOOT_SHOW_SETTINGS          // If defined, show settings at boot, like as: 'v:20,200,3000,51000,2,1,1600@'
-#define ADD_LINE_FEED               // If defined, add line feed '\n' each line output.
+#define EVERY_SEC_LINE_FEED       // If defined, print line feed '\n' every second, to emulate legacy firmware.
+//#define SEND_STRIPPED_SPACES        // If defined, send every 'space' before 'pulse' in broadcast(), which stripped in legacy firmware.
+//#define LED_BLINK_RX LED_BUILTIN    // If defined, sets the digital output to blink on valid RF code reception.
+//#define DEFAULT_RX_SETTINGS         // If defined, sets valid RX settings at boot, like sets 's:20,200,3000,51000@'
+//#define BOOT_SHOW_SETTINGS          // If defined, show settings at boot, like as: 'v:20,200,3000,51000,2,1,1600@'
+//#define ADD_LINE_FEED               // If defined, add line feed '\n' each line output.
 
 #define BUFFER_SIZE           256   // Warning: 256 max because buffer indexes "nrpulses" and "q" are "uint8_t" type
 #define MAX_PULSE_TYPES        10   // From 0 to 9
@@ -64,7 +64,7 @@ uint32_t maxgaplen = 5100;          // Unused. Preserved for legacy compatibilit
 
 char data[BUFFER_SIZE] = {0};                       // Fill to 0 // Buffer for serial uart inputs and outputs
 volatile uint16_t codes[BUFFER_SIZE] = {0};         // Fill to 0 // Buffer to store pulses length
-         uint16_t plstypes[MAX_PULSE_TYPES] = {0};  // Fill to 0 // Buffer to store pulse types (RX and TX)
+         uint32_t plstypes[MAX_PULSE_TYPES] = {0};  // Fill to 0 // Buffer to store pulse types (RX and TX)
 volatile uint32_t new_counter = 0;                  // Global time counter to store initial pulse micros(). Replaces global ten_us_counter.
 
 volatile uint8_t q = 0;                             // Index of data buffer
