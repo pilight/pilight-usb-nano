@@ -15,8 +15,8 @@
    - Configurable RF transmitter input (TX_PIN); can be any digital pin, depends board (D5 as default).
    - Support to configure a digital output so that a led blinks at valid RF code reception.
    - Support to configure send of every 'space' before 'pulse', which stripped in previous version firmware.
-   - Support to configure initial RX settings at boot, like as 's:20,200,3000,51000@'.
-   - Support to configure show settings at boot, like as: 'v:20,200,3000,51000,2,1,1600@'.
+   - Support to configure initial RX settings at boot, like as 's:20,200,3000,82000@'.
+   - Support to configure show settings at boot, like as: 'v:20,200,3000,82000,2,1,1600@'.
    - Support to configure add line feed '\n' each line output.
 
 */ 
@@ -52,7 +52,7 @@ uint32_t maxrawlen =     0;
 uint32_t mingaplen = 10000;         // Used and showing multiplied by 10
 #endif 
 
-uint32_t maxgaplen = 5100;          // Unused. Preserved for legacy compatibility.
+uint32_t maxgaplen = 82000;         // v2 used and change from 5100 to 82000 (for quigg_gt7000 protocol) set and show as is.
 
 // Code formatting meant for sending
 // on  c:102020202020202020220202020020202200202200202020202020220020202203;p:279,2511,1395,9486;r:5@
@@ -90,8 +90,8 @@ void setup() {
   Serial.begin(BAUD);
 
 #ifdef BOOT_SHOW_SETTINGS
-  // Show settings at boot, like as: 'v:22,200,3000,51000,2,8,3600@'
-  sprintf(data, "v:%lu,%lu,%lu,%lu,%d,%d,%d@", minrawlen, maxrawlen, mingaplen*10, maxgaplen*10, VERSION, MIN_PULSELENGTH/10, MAX_PULSELENGTH/10);
+  // Show settings at boot, like as: 'v:20,200,3000,82000,2,1,1600@'
+  sprintf(data, "v:%lu,%lu,%lu,%lu,%d,%d,%d@", minrawlen, maxrawlen, mingaplen*10, maxgaplen, VERSION, MIN_PULSELENGTH/10, MAX_PULSELENGTH/10);
 #ifdef ADD_LINE_FEED
   Serial.println(data);
 #else
@@ -144,19 +144,19 @@ void receive() {
                     maxrawlen = atol(&data[s]);
                 }
                 if(x == 2) {
-                    mingaplen = atoi(&data[s])/10;
+                    mingaplen = atol(&data[s])/10;
                 }
                 x++;
                 s = i+1;
             }
         }
         if(x == 3) {
-            maxgaplen = atol(&data[s])/10;
+            maxgaplen = atol(&data[s]);
         }
         /*
          * Once we tuned our firmware send back our settings + fw version
          */
-        sprintf(data, "v:%lu,%lu,%lu,%lu,%d,%d,%d@", minrawlen, maxrawlen, mingaplen*10, maxgaplen*10, VERSION, MIN_PULSELENGTH/10, MAX_PULSELENGTH/10);
+        sprintf(data, "v:%lu,%lu,%lu,%lu,%d,%d,%d@", minrawlen, maxrawlen, mingaplen*10, maxgaplen, VERSION, MIN_PULSELENGTH/10, MAX_PULSELENGTH/10);
 #ifdef ADD_LINE_FEED
         Serial.println(data);
 #else
@@ -169,32 +169,47 @@ void receive() {
         for(i = spulse; i < spulse + z; i++) {
             if(data[i] == ',') {
                 data[i] = '\0';
-                plstypes[nrpulses++] = atoi(&data[s]);
+                plstypes[nrpulses++] = atol(&data[s]);
                 s = i+1;
             }
         }
-        plstypes[nrpulses++] = atoi(&data[s]);
+        plstypes[nrpulses++] = atol(&data[s]);
+        s = strlen(&data[scode]);
+        x = (unsigned int)atoi(&data[srepeat]);
 
-    /* Begin RF TX */
-    // Disable all interrupts
+        // Check for maxgaplen
+        for(z = scode; z < scode + s; z++) {
+          if (plstypes[data[z] - '0'] >= maxgaplen){
+            return ; 
+          }
+        }
+
+        /* Begin RF TX */
+        // Disable all interrupts
         noInterrupts(); 
-        for(i=0;i<(unsigned int)atoi(&data[srepeat]);i++) {
-            for(z = scode; z < scode + strlen(&data[scode]); z++) {
+        for(i=0;i<x;i++) {
+            for(z = scode; z < scode + s ; z++) {
                 digitalWrite(TX_PIN,!(z%2));
-                delayMicroseconds(plstypes[data[z] - '0'] - 14);  // subtract 14us to compensate digitalWrite() delay      
+                if (plstypes[data[z] - '0'] < 16383 ){               // Arduino delayMicroseconds(unsigned int us)  
+                    delayMicroseconds(plstypes[data[z] - '0']-5);   // Currently, the largest value that will produce an accurate delay is 16383.
+                }else{
+                    interrupts();
+                    delay((plstypes[data[z] - '0']-107)/1000);
+                    noInterrupts();
+                    delayMicroseconds( (plstypes[data[z] - '0']-107) - (((plstypes[data[z] - '0']-107)/1000)*1000) );
+                } 
             }
         }
         digitalWrite(TX_PIN,LOW);
+        // Re-Enable all interrupts
+        interrupts();
+        /* End RF TX */
 
-    // Clear pulse types array
+        // Clear pulse types array
         for(i=0;i<MAX_PULSE_TYPES;i++) {
             plstypes[i] = 0;
         }
         q = 0;
-
-    // Re-Enable all interrupts
-      interrupts();
-    /* End RF TX */
     }
 }
 
