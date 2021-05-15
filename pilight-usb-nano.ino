@@ -28,8 +28,8 @@
 #define EVERY_SEC_LINE_FEED       // If defined, print line feed '\n' every second, to emulate legacy firmware.
 //#define SEND_STRIPPED_SPACES        // If defined, send every 'space' before 'pulse' in broadcast(), which stripped in legacy firmware.
 //#define LED_BLINK_RX LED_BUILTIN    // If defined, sets the digital output to blink on valid RF code reception.
-//#define DEFAULT_RX_SETTINGS         // If defined, sets valid RX settings at boot, like sets 's:20,200,3000,51000@'
-//#define BOOT_SHOW_SETTINGS          // If defined, show settings at boot, like as: 'v:20,200,3000,51000,2,1,1600@'
+//#define DEFAULT_RX_SETTINGS         // If defined, sets valid RX settings at boot, like sets 's:20,200,3000,82000@'
+//#define BOOT_SHOW_SETTINGS          // If defined, show settings at boot, like as: 'v:20,200,3000,82000,2,1,1600@'
 //#define ADD_LINE_FEED               // If defined, add line feed '\n' each line output.
 
 #define BUFFER_SIZE           256   // Warning: 256 max because buffer indexes "nrpulses" and "q" are "uint8_t" type
@@ -180,6 +180,11 @@ void receive() {
         // Check for maxgaplen
         for(z = scode; z < scode + s; z++) {
           if (plstypes[data[z] - '0'] >= maxgaplen){
+            // Clear pulse types array
+            for(i=0;i<MAX_PULSE_TYPES;i++) {
+                plstypes[i] = 0;
+            }
+            q = 0;
             return ; 
           }
         }
@@ -304,7 +309,7 @@ void ISR_RX(){
                 nrpulses = 0;
             }
             /* Let's match footers */
-            if(ten_us_counter > mingaplen) {
+            if((ten_us_counter > mingaplen) and (ten_us_counter < maxgaplen/10))  {
                 /* Only match minimal length pulse streams */
                 if(nrpulses >= minrawlen && nrpulses <= maxrawlen) {
                     /*
