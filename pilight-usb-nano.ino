@@ -292,8 +292,6 @@ void broadcast(uint8_t nrpulses) {
 
 // Generic ISR function for RF RX pulse interrupt handler
 void ISR_RX(){
-  // Disable ISR for RF RX interrupt handler only
-  detachInterrupt(digitalPinToInterrupt(RX_PIN));
 
   uint32_t current_counter = micros();
   uint16_t ten_us_counter  = uint16_t((current_counter-new_counter)/10);
@@ -328,11 +326,6 @@ void ISR_RX(){
             }
         }
     }
-
-  // If no broadcast, re-enable ISR for RF RX interrupt handler
-  if (broadcast_flag == 0){
-    attachInterrupt(digitalPinToInterrupt(RX_PIN), ISR_RX, CHANGE);
-  }
 }
 
 void loop(){
@@ -360,9 +353,6 @@ void loop(){
 #ifdef LED_BLINK_RX
     digitalWrite(LED_BLINK_RX, LOW); // Led blink on RF RX
 #endif
-
-    // Re-enable ISR for RF RX interrupt handler
-    attachInterrupt(digitalPinToInterrupt(RX_PIN), ISR_RX, CHANGE);
   }
 
 #ifdef EVERY_SEC_LINE_FEED
