@@ -52,7 +52,7 @@ uint32_t maxrawlen =     0;
 uint32_t mingaplen = 10000;         // Used and showing multiplied by 10
 #endif 
 
-uint32_t maxgaplen = 82000;         // v2 used and change from 5100 to 82000 (for quigg_gt7000 protocol) set and show as is.
+uint16_t maxgaplen =  8200;         // v2 used and change from 5100 to 8200 (for quigg_gt7000 protocol) set and show multiplied by 10
 
 // Code formatting meant for sending
 // on  c:102020202020202020220202020020202200202200202020202020220020202203;p:279,2511,1395,9486;r:5@
@@ -91,7 +91,7 @@ void setup() {
 
 #ifdef BOOT_SHOW_SETTINGS
   // Show settings at boot, like as: 'v:20,200,3000,82000,2,1,1600@'
-  sprintf(data, "v:%lu,%lu,%lu,%lu,%d,%d,%d@", minrawlen, maxrawlen, mingaplen*10, maxgaplen, VERSION, MIN_PULSELENGTH/10, MAX_PULSELENGTH/10);
+  sprintf(data, "v:%lu,%lu,%lu,%lu,%d,%d,%d@", minrawlen, maxrawlen, mingaplen*10, uint32_t(maxgaplen)*10, VERSION, MIN_PULSELENGTH/10, MAX_PULSELENGTH/10);
 #ifdef ADD_LINE_FEED
   Serial.println(data);
 #else
@@ -151,12 +151,12 @@ void receive() {
             }
         }
         if(x == 3) {
-            maxgaplen = atol(&data[s]);
+            maxgaplen = uint16_t(atol(&data[s])/10);
         }
         /*
          * Once we tuned our firmware send back our settings + fw version
          */
-        sprintf(data, "v:%lu,%lu,%lu,%lu,%d,%d,%d@", minrawlen, maxrawlen, mingaplen*10, maxgaplen, VERSION, MIN_PULSELENGTH/10, MAX_PULSELENGTH/10);
+        sprintf(data, "v:%lu,%lu,%lu,%lu,%d,%d,%d@", minrawlen, maxrawlen, mingaplen*10, uint32_t(maxgaplen)*10, VERSION, MIN_PULSELENGTH/10, MAX_PULSELENGTH/10);
 #ifdef ADD_LINE_FEED
         Serial.println(data);
 #else
@@ -179,7 +179,7 @@ void receive() {
 
         // Check for maxgaplen
         for(z = scode; z < scode + s; z++) {
-          if (plstypes[data[z] - '0'] >= maxgaplen){
+          if (plstypes[data[z] - '0'] >= uint32_t(maxgaplen*10)){
             // Clear pulse types array
             for(i=0;i<MAX_PULSE_TYPES;i++) {
                 plstypes[i] = 0;
@@ -309,7 +309,7 @@ void ISR_RX(){
                 nrpulses = 0;
             }
             /* Let's match footers */
-            if((ten_us_counter > mingaplen) and (ten_us_counter < maxgaplen/10))  {
+            if((ten_us_counter > mingaplen) and (ten_us_counter < maxgaplen))  {
                 /* Only match minimal length pulse streams */
                 if(nrpulses >= minrawlen && nrpulses <= maxrawlen) {
                     /*
