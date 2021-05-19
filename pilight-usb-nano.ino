@@ -43,12 +43,12 @@
 #define VERSION                 2   // Version 2 (Arduino compatible)
 
 #ifdef DEFAULT_RX_SETTINGS
-uint32_t minrawlen =    20;
-uint32_t maxrawlen =   200;
+uint8_t  minrawlen =    20;         // Minimum number of pulses
+uint8_t  maxrawlen =   200;         // Maximum number of pulses
 uint16_t mingaplen =   300;         // Minimum length of footer pulse and maximum length of previous pulses. Used and showing multiplied by 10
 #else
-uint32_t minrawlen =  1000;
-uint32_t maxrawlen =     0;
+uint8_t  minrawlen = UINT8_MAX;     // Maximum value for uint8_t from <cstdint> (stdint.h)
+uint8_t  maxrawlen =     0;
 uint16_t mingaplen = 10000;         // Used and showing multiplied by 10
 #endif 
 
@@ -91,7 +91,7 @@ void setup() {
 
 #ifdef BOOT_SHOW_SETTINGS
   // Show settings at boot, like as: 'v:20,200,3000,82000,2,1,1600@'
-  sprintf(data, "v:%lu,%lu,%lu,%lu,%d,%d,%d@", minrawlen, maxrawlen, uint32_t(mingaplen)*10, uint32_t(maxgaplen)*10, VERSION, MIN_PULSELENGTH/10, MAX_PULSELENGTH/10);
+  sprintf(data, "v:%u,%u,%lu,%lu,%d,%d,%d@", minrawlen, maxrawlen, uint32_t(mingaplen)*10, uint32_t(maxgaplen)*10, VERSION, MIN_PULSELENGTH/10, MAX_PULSELENGTH/10);
 #ifdef ADD_LINE_FEED
   Serial.println(data);
 #else
@@ -138,10 +138,10 @@ void receive() {
             if(data[i] == ',') {
                 data[i] = '\0';
                 if(x == 0) {
-                    minrawlen = atol(&data[s]);
+                    minrawlen = uint8_t(atoi(&data[s]));
                 }
                 if(x == 1) {
-                    maxrawlen = atol(&data[s]);
+                    maxrawlen = uint8_t(atoi(&data[s]));
                 }
                 if(x == 2) {
                     mingaplen = uint16_t(atol(&data[s])/10);
@@ -156,7 +156,7 @@ void receive() {
         /*
          * Once we tuned our firmware send back our settings + fw version
          */
-        sprintf(data, "v:%lu,%lu,%lu,%lu,%d,%d,%d@", minrawlen, maxrawlen, uint32_t(mingaplen)*10, uint32_t(maxgaplen)*10, VERSION, MIN_PULSELENGTH/10, MAX_PULSELENGTH/10);
+        sprintf(data, "v:%u,%u,%lu,%lu,%d,%d,%d@", minrawlen, maxrawlen, uint32_t(mingaplen)*10, uint32_t(maxgaplen)*10, VERSION, MIN_PULSELENGTH/10, MAX_PULSELENGTH/10);
 #ifdef ADD_LINE_FEED
         Serial.println(data);
 #else
