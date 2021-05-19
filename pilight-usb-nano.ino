@@ -15,8 +15,8 @@
    - Configurable RF transmitter input (TX_PIN); can be any digital pin, depends board (D5 as default).
    - Support to configure a digital output so that a led blinks at valid RF code reception.
    - Support to configure send of every 'space' before 'pulse', which stripped in previous version firmware.
-   - Support to configure initial RX settings at boot, like as 's:20,200,3000,82000@'.
-   - Support to configure show settings at boot, like as: 'v:20,200,3000,82000,2,1,1600@'.
+   - Support to configure initial RX settings at boot, like as 's:20,200,4000,82000@'.
+   - Support to configure show settings at boot, like as: 'v:20,200,4000,82000,2,1,1600@'.
    - Support to configure add line feed '\n' each line output.
 
 */ 
@@ -28,8 +28,8 @@
 #define EVERY_SEC_LINE_FEED       // If defined, print line feed '\n' every second, to emulate legacy firmware.
 //#define SEND_STRIPPED_SPACES        // If defined, send every 'space' before 'pulse' in broadcast(), which stripped in legacy firmware.
 //#define LED_BLINK_RX LED_BUILTIN    // If defined, sets the digital output to blink on valid RF code reception.
-//#define DEFAULT_RX_SETTINGS         // If defined, sets valid RX settings at boot, like sets 's:20,200,3000,82000@'
-//#define BOOT_SHOW_SETTINGS          // If defined, show settings at boot, like as: 'v:20,200,3000,82000,2,1,1600@'
+//#define DEFAULT_RX_SETTINGS         // If defined, sets valid RX settings at boot, like sets 's:20,200,4000,82000@'
+//#define BOOT_SHOW_SETTINGS          // If defined, show settings at boot, like as: 'v:20,200,4000,82000,2,1,1600@'
 //#define ADD_LINE_FEED               // If defined, add line feed '\n' each line output.
 
 #define BUFFER_SIZE           256   // Warning: 256 max because buffer indexes "nrpulses" and "q" are "uint8_t" type
@@ -45,7 +45,7 @@
 #ifdef DEFAULT_RX_SETTINGS
 uint8_t  minrawlen =    20;         // Minimum number of pulses
 uint8_t  maxrawlen =   200;         // Maximum number of pulses
-uint16_t mingaplen =   300;         // Minimum length of footer pulse and maximum length of previous pulses. Used and showing multiplied by 10
+uint16_t mingaplen =   400;         // Minimum length of footer pulse and maximum length of previous pulses. Used and showing multiplied by 10
 #else
 uint8_t  minrawlen = UINT8_MAX;     // Maximum value for uint8_t from <cstdint> (stdint.h)
 uint8_t  maxrawlen =     0;
@@ -90,7 +90,7 @@ void setup() {
   Serial.begin(BAUD);
 
 #ifdef BOOT_SHOW_SETTINGS
-  // Show settings at boot, like as: 'v:20,200,3000,82000,2,1,1600@'
+  // Show settings at boot, like as: 'v:20,200,4000,82000,2,1,1600@'
   sprintf(data, "v:%u,%u,%lu,%lu,%d,%d,%d@", minrawlen, maxrawlen, uint32_t(mingaplen)*10, uint32_t(maxgaplen)*10, VERSION, MIN_PULSELENGTH/10, MAX_PULSELENGTH/10);
 #ifdef ADD_LINE_FEED
   Serial.println(data);
