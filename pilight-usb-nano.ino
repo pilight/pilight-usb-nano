@@ -38,7 +38,7 @@
 
 /* Show numbers devided by 10 */
 #define MIN_PULSELENGTH         6   // v2 change from 8 to 6 and show devided by 10
-#define MAX_PULSELENGTH     16000   // v2 change from 1600 to 16000 and show devided by 10
+#define MAX_PULSELENGTH      8200   // v2 change from 1600 to 8200 (for quigg_gt7000 protocol footer pulse around 81000 usecs)
 
 #define VERSION                 2   // Version 2 (Arduino compatible)
 
@@ -52,7 +52,7 @@ uint8_t  maxrawlen =     0;
 uint16_t mingaplen = 10000;         // Used and showing multiplied by 10
 #endif 
 
-uint16_t maxgaplen =  8200;         // v2 used and change from 5100 to 8200 (for quigg_gt7000 protocol) set and show multiplied by 10
+uint16_t maxgaplen = MAX_PULSELENGTH; // v2 used and change from 5100 to MAX_PULSELENGTH, set and show multiplied by 10
 
 // Code formatting meant for sending
 // on  c:102020202020202020220202020020202200202200202020202020220020202203;p:279,2511,1395,9486;r:5@
@@ -91,7 +91,7 @@ void setup() {
 
 #ifdef BOOT_SHOW_SETTINGS
   // Show settings at boot, like as: 'v:20,200,4000,82000,2,1,1600@'
-  sprintf(data, "v:%u,%u,%lu,%lu,%d,%d,%d@", minrawlen, maxrawlen, uint32_t(mingaplen)*10, uint32_t(maxgaplen)*10, VERSION, MIN_PULSELENGTH/10, MAX_PULSELENGTH/10);
+  sprintf(data, "v:%u,%u,%lu,%lu,%d,%d,%d@", minrawlen, maxrawlen, uint32_t(mingaplen)*10, uint32_t(maxgaplen)*10, VERSION, MIN_PULSELENGTH/10, MAX_PULSELENGTH);
 #ifdef ADD_LINE_FEED
   Serial.println(data);
 #else
@@ -156,7 +156,7 @@ void receive() {
         /*
          * Once we tuned our firmware send back our settings + fw version
          */
-        sprintf(data, "v:%u,%u,%lu,%lu,%d,%d,%d@", minrawlen, maxrawlen, uint32_t(mingaplen)*10, uint32_t(maxgaplen)*10, VERSION, MIN_PULSELENGTH/10, MAX_PULSELENGTH/10);
+        sprintf(data, "v:%u,%u,%lu,%lu,%d,%d,%d@", minrawlen, maxrawlen, uint32_t(mingaplen)*10, uint32_t(maxgaplen)*10, VERSION, MIN_PULSELENGTH/10, MAX_PULSELENGTH);
 #ifdef ADD_LINE_FEED
         Serial.println(data);
 #else
