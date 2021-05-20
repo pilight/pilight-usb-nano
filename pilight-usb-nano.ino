@@ -37,7 +37,7 @@
 #define BAUD                57600
 
 /* Show numbers devided by 10 */
-#define MIN_PULSELENGTH        10   // v2 change from 8 to 10 and show devided by 10
+#define MIN_PULSELENGTH         6   // v2 change from 8 to 6 and show devided by 10
 #define MAX_PULSELENGTH     16000   // v2 change from 1600 to 16000 and show devided by 10
 
 #define VERSION                 2   // Version 2 (Arduino compatible)
