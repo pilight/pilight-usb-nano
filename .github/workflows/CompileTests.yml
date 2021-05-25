@@ -1,0 +1,104 @@
+# This is the name of the workflow, visible on GitHub UI.
+name: 'Compile tests'
+
+#description: 'Run the Arduino CLI to compile the sketch and check if it compiles fine for multiple boards'
+#author: 'Jorge Rivera'
+
+# Controls when the action will run. 
+# Here we tell GitHub to run the workflow when a commit.
+on:
+  # Triggers the workflow on push or pull request events but only for the "arduino" branch
+  push:
+    branches: [ arduino ]
+    paths:
+      - '*.ino'
+      - '.github/workflows/*.yml'
+
+  pull_request:
+    branches: [ arduino ]
+    paths:
+      - '*.ino'
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# This is the list of jobs that will be run concurrently.
+# Since we use a build matrix, the actual number of jobs
+# started depends on how many configurations the matrix
+# will produce.
+jobs:
+  boards:
+    
+    # This is the name of the job
+    name: "Compile test for ${{ matrix.config.board }}"
+    
+    # This is the platform GitHub will use to run our workflow, we
+    # pick Linux for no particular reason.
+    runs-on: ubuntu-latest
+    
+    # Here we tell GitHub that the jobs must be determined
+    # dynamically depending on a matrix configuration.
+    strategy:
+      
+      # Set to false so that GitHub does not cancel all jobs
+      # in progress if any array job fails.
+      fail-fast: false
+      
+      # The matrix will produce one job for each configuration:
+      matrix:
+        config:
+          - board: "Arduino Nano"
+            fqbn: "arduino:avr:nano"
+            platform: "arduino:avr"
+
+          - board: "Arduino UNO"
+            fqbn: "arduino:avr:uno" 
+            platform: "arduino:avr"
+        
+          - board: "Arduino Leonardo"
+            fqbn: "arduino:avr:leonardo"
+            platform: "arduino:avr"
+
+          - board: "Arduino Due (Native USB Port)"
+            fqbn: "arduino:sam:arduino_due_x"
+            platform: "arduino:sam"
+
+          - board: "Arduino M0"
+            fqbn: "arduino:samd:mzero_bl"
+            platform: "arduino:samd"
+
+          - board: "ESP8266 NodeMCUv2"
+            fqbn: "esp8266:esp8266:nodemcuv2"
+            platform: "esp8266:esp8266"
+            additional-url: "--additional-urls https://arduino.esp8266.com/stable/package_esp8266com_index.json"
+    
+    # This is the list of steps this job will run.
+    steps:
+      # First of all, we clone the repo using the "checkout" action.
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      # We use the "arduino/setup-arduino-cli" action to install and
+      # configure the Arduino CLI on the system.
+      - name: Setup Arduino CLI
+        uses: arduino/setup-arduino-cli@v1.1.1
+
+      # We then install the platform, which one will be determined
+      # dynamically by the build matrix.
+      - name: Install platform ${{ matrix.config.platform }} 
+        run: |
+          arduino-cli config init -v ${{ matrix.config.additional-url }}
+          arduino-cli core update-index -v 
+          arduino-cli core install -v ${{ matrix.config.platform }} --run-post-install
+          
+      # Finally, we compile the sketch, using the FQBN that was set in the build matrix.
+      - name: Compile sketch for ${{ matrix.config.board }}
+        run: arduino-cli compile -v --fqbn ${{ matrix.config.fqbn }} --export-binaries --warnings all --log-level info
+      
+      # Upload binary (.hex) files to artifacts
+      - name: Upload compiled binaries files to Artifacts
+        uses: actions/upload-artifact@v1
+        with:
+          name: "Binaries for ${{ matrix.config.board }}"
+          path: ./
