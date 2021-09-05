@@ -18,12 +18,14 @@
    - Support to configure initial RX settings at boot, like as 's:20,200,4000,82000@'.
    - Support to configure show settings at boot, like as: 'v:20,200,4000,82000,2,1,1600@'.
    - Support to configure add line feed '\n' each line output.
+   - Support to configure a tx enable pin (PTT_PIN), useful for use transceivers.
 
 */ 
 
 /* Configurable RX & TX pins */
 #define RX_PIN                2     // Pin for ASK/OOK pulse input from RF receiver module data output.
 #define TX_PIN                5     // Pin for ASK/OOK pulse output to RF transmitter module data input.
+#define PTT_PIN               4     // If a pin is defined, it will set to high state during transmissions.
 
 #define EVERY_SEC_LINE_FEED       // If defined, print line feed '\n' every second, to emulate legacy firmware.
 //#define SEND_STRIPPED_SPACES        // If defined, send every 'space' before 'pulse' in broadcast(), which stripped in legacy firmware.
@@ -81,6 +83,12 @@ void setup() {
 
 #ifdef LED_BLINK_RX
   pinMode(LED_BLINK_RX, OUTPUT);
+#endif
+
+#ifdef PTT_PIN
+  // If defined PTT PIN set output low
+  pinMode(PTT_PIN,OUTPUT);
+  digitalWrite(PTT_PIN,LOW);
 #endif
 
   // Arduino built-in function to attach Interrupt Service Routines (depends board)
@@ -190,6 +198,10 @@ void receive() {
         }
 
         /* Begin RF TX */
+  #ifdef PTT_PIN
+        // Enable PTT
+        digitalWrite(PTT_PIN,HIGH);
+  #endif
         // Disable all interrupts
         noInterrupts(); 
         for(i=0;i<x;i++) {
@@ -208,6 +220,10 @@ void receive() {
         digitalWrite(TX_PIN,LOW);
         // Re-Enable all interrupts
         interrupts();
+  #ifdef PTT_PIN
+        // Disable PTT
+        digitalWrite(PTT_PIN,LOW);
+  #endif
         /* End RF TX */
 
         // Clear pulse types array

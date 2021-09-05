@@ -15,6 +15,9 @@ The pilight USB Nano software allows any computer with an USB port to work with 
  - Support to configure a digital output so that a led blinks at valid RF code reception.
  - Support to configure send of every 'space' before 'pulse', which stripped in previous version firmware.
  - Support to configure initial RX settings at boot, like as 's:22,200,3000,51000@'.
+ - Support to configure show settings at boot, like as: 'v:20,200,4000,82000,2,1,1600@'.
+ - Support to configure add line feed '\n' each line output.
+ - Support to configure a tx enable pin (PTT_PIN), useful for use transceivers.
  - Fix TX pulse generator drift from 9.95µS to 0.69µS (AVR@16Mhz).
  - Improve RX pulse meter resolution from 10µS to 4µS (AVR@16Mhz).
 
