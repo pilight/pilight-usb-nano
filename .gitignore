@@ -1,8 +1,35 @@
+# Compiler outputs 
+build/*
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+.history/
+
+# OS generated files 
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+
+# Prerequisites
+*.d
+
+# Precompiled Headers
+*.gch
+*.pch
+
 # Object files
 *.o
 *.ko
 *.obj
 *.elf
+*.bin
+*.eep
+*.lo
+*.slo
 
 # Precompiled Headers
 *.gch
@@ -12,7 +39,7 @@
 *.lib
 *.a
 *.la
-*.lo
+*.lai
 
 # Shared objects (inc. Windows DLLs)
 *.dll
