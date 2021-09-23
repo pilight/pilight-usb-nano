@@ -346,6 +346,11 @@ void ISR_RX(){
 
 void loop(){
 
+  // Workaround for Leonardo, Micro, and others MCUs like ESP8266 and ESP32
+#ifndef HAVE_HWSERIAL0
+  if (Serial.available()) serialEvent();
+#endif
+
   // if receive flag is set
   if (receive_flag){
     // Call to receive()
