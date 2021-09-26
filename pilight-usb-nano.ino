@@ -306,8 +306,18 @@ void broadcast(uint8_t nrpulses) {
 #endif
 }
 
+#if defined ESP8266 
+    // interrupt handler and related code must be in RAM on ESP8266
+    #define RECEIVE_ATTR ICACHE_RAM_ATTR
+#elif defined ESP32
+	// interrupt handler and related code must be in RAM on ESP32	
+	#define RECEIVE_ATTR IRAM_ATTR
+#else
+    #define RECEIVE_ATTR
+#endif
+
 // Generic ISR function for RF RX pulse interrupt handler
-void ISR_RX(){
+void RECEIVE_ATTR ISR_RX(){
 
   uint32_t current_counter = micros();
   uint16_t ten_us_counter  = uint16_t((current_counter-new_counter)/10);
