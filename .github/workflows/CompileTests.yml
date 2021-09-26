@@ -99,7 +99,7 @@ jobs:
           
       # Finally, we compile the sketch, using the FQBN that was set in the build matrix.
       - name: Compile sketch for ${{ matrix.config.board }}
-        run: arduino-cli compile -v --fqbn ${{ matrix.config.fqbn }} --export-binaries --warnings all --log-level info
+        run: arduino-cli compile -v --fqbn ${{ matrix.config.fqbn }} --export-binaries --warnings none --log-level info
       
       # Upload binary (.hex) files to artifacts
       - name: Upload compiled binaries files to Artifacts
